@@ -9,10 +9,10 @@ import { PodiumView } from '../components/PodiumView'
 import { MotivationView } from '../components/MotivationView'
 import { SalesChart } from '../components/SalesChart'
 import { AnimatedNumber } from '../components/AnimatedNumber'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useSellers, useTeamGoal, useSettings } from '../hooks/useFirestore'
 import { useCarousel } from '../hooks/useCarousel'
 import { useAudioAlert } from '../hooks/useAudioAlert'
-import { initialSellers, initialTeamGoal, periods } from '../data/initialData'
+import { periods } from '../data/initialData'
 
 const backgroundImages = [
   '/assets/background-1.jpg',
@@ -25,8 +25,9 @@ const VIEW_COUNT = 3
 const viewLabels = ['Visao Geral', 'Podium', 'Motivacao']
 
 export function DashboardTV() {
-  const [sellers] = useLocalStorage('metaVendedores_sellers', initialSellers)
-  const [teamGoal] = useLocalStorage('metaVendedores_teamGoal', initialTeamGoal)
+  const { sellers, loading: sellersLoading } = useSellers()
+  const { teamGoal, loading: goalLoading } = useTeamGoal()
+  const { loading: settingsLoading } = useSettings()
   const [period, setPeriod] = useState('daily')
   const [bgIndex, setBgIndex] = useState(0)
   const [fade, setFade] = useState(true)
@@ -84,20 +85,20 @@ export function DashboardTV() {
   const getTeamTotal = () => {
     return sellers.reduce((total, seller) => {
       switch (period) {
-        case 'daily': return total + seller.dailySales
-        case 'monthly': return total + seller.monthlySales
-        case 'annual': return total + seller.annualSales
-        default: return total + seller.dailySales
+        case 'daily': return total + (seller.dailySales || 0)
+        case 'monthly': return total + (seller.monthlySales || 0)
+        case 'annual': return total + (seller.annualSales || 0)
+        default: return total + (seller.dailySales || 0)
       }
     }, 0)
   }
 
   const getTeamGoalForPeriod = () => {
     switch (period) {
-      case 'daily': return teamGoal.daily
-      case 'monthly': return teamGoal.monthly
-      case 'annual': return teamGoal.annual
-      default: return teamGoal.daily
+      case 'daily': return teamGoal.daily || 0
+      case 'monthly': return teamGoal.monthly || 0
+      case 'annual': return teamGoal.annual || 0
+      default: return teamGoal.daily || 0
     }
   }
 
@@ -119,14 +120,28 @@ export function DashboardTV() {
     .sort((a, b) => {
       const getSales = (s) => {
         switch (period) {
-          case 'daily': return s.dailySales
-          case 'monthly': return s.monthlySales
-          case 'annual': return s.annualSales
-          default: return s.dailySales
+          case 'daily': return s.dailySales || 0
+          case 'monthly': return s.monthlySales || 0
+          case 'annual': return s.annualSales || 0
+          default: return s.dailySales || 0
         }
       }
       return getSales(b) - getSales(a)
     })
+
+  const isLoading = sellersLoading || goalLoading || settingsLoading
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-cyan-400 font-medium">Conectando ao Firestore...</p>
+          <p className="text-slate-500 text-sm mt-1">Sincronizando dados em tempo real</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -246,17 +261,6 @@ export function DashboardTV() {
                   >
                     <span>⚙️</span>
                     Painel do Gestor
-                  </button>
-                  <div className="border-t border-slate-800" />
-                  <button
-                    onClick={() => {
-                      localStorage.clear()
-                      window.location.reload()
-                    }}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-left text-xs sm:text-sm text-slate-300 hover:bg-slate-800 hover:text-red-400 flex items-center gap-3 transition-colors"
-                  >
-                    <span>🗑️</span>
-                    Limpar Dados
                   </button>
                 </div>
               )}

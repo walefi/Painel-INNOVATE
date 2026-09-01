@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useLocalStorage } from '../hooks/useLocalStorage'
-import { initialSellers, initialTeamGoal, initialSettings, periods } from '../data/initialData'
+import { useSellers, useSettings, useTeamGoal } from '../hooks/useFirestore'
+import { periods } from '../data/initialData'
 
 export function AdminPanel() {
-  const [sellers, setSellers] = useLocalStorage('metaVendedores_sellers', initialSellers)
-  const [teamGoal, setTeamGoal] = useLocalStorage('metaVendedores_teamGoal', initialTeamGoal)
-  const [settings, setSettings] = useLocalStorage('metaVendedores_settings', initialSettings)
+  const { sellers, loading, addSeller, updateSeller, deleteSeller, bulkUpdateSellers, initializeSellers } = useSellers()
+  const { settings, updateSettings } = useSettings()
+  const { teamGoal, updateTeamGoal } = useTeamGoal()
   const [period, setPeriod] = useState('daily')
 
   const [formData, setFormData] = useState({
@@ -45,14 +45,14 @@ export function AdminPanel() {
     })
   }
 
-  const applyBulkGoals = () => {
-    const updated = sellers.map((seller) => ({
-      ...seller,
+  const applyBulkGoals = async () => {
+    const updates = sellers.map((seller) => ({
+      id: seller.id,
       dailyGoal: bulkGoalDaily ? parseInt(bulkGoalDaily) : seller.dailyGoal,
       monthlyGoal: bulkGoalMonthly ? parseInt(bulkGoalMonthly) : seller.monthlyGoal,
       annualGoal: bulkGoalAnnual ? parseInt(bulkGoalAnnual) : seller.annualGoal,
     }))
-    setSellers(updated)
+    await bulkUpdateSellers(updates)
     setBulkGoalDaily('')
     setBulkGoalMonthly('')
     setBulkGoalAnnual('')
@@ -74,34 +74,22 @@ export function AdminPanel() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Tem certeza que deseja remover este vendedor?')) {
-      setSellers(sellers.filter((s) => s.id !== id))
+      await deleteSeller(id)
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.name.trim()) {
       alert('Por favor, insira o nome do vendedor')
       return
     }
     if (formData.id) {
-      setSellers(sellers.map((s) => {
-        if (s.id !== formData.id) return s
-        return { ...s, ...formData }
-      }))
+      await updateSeller(formData.id, formData)
     } else {
-      setSellers([...sellers, {
-        ...formData,
-        id: Date.now(),
-        dailySales: 0,
-        monthlySales: 0,
-        annualSales: 0,
-        avatarUrl: formData.avatarUrl || '',
-        badges: formData.badges || [],
-        manualTags: formData.manualTags || [],
-      }])
+      await addSeller(formData)
     }
     resetForm()
   }
@@ -111,7 +99,7 @@ export function AdminPanel() {
     if (!file) return
 
     if (file.size > 500 * 1024) {
-      alert('A imagem deve ter no máximo 500KB')
+      alert('A imagem deve ter no maximo 500KB')
       return
     }
 
@@ -119,7 +107,7 @@ export function AdminPanel() {
     reader.onload = (event) => {
       const base64 = event.target.result
       if (sellerId) {
-        setSellers(sellers.map((s) => s.id === sellerId ? { ...s, avatar: base64 } : s))
+        updateSeller(sellerId, { avatar: base64 })
       } else {
         setFormData({ ...formData, avatar: base64 })
       }
@@ -127,54 +115,59 @@ export function AdminPanel() {
     reader.readAsDataURL(file)
   }
 
-  const handleUpdateSales = (sellerId, field, value) => {
+  const handleUpdateSales = async (sellerId, field, value) => {
     const numValue = parseFloat(value) || 0
-    setSellers(sellers.map((s) => s.id === sellerId ? { ...s, [field]: numValue } : s))
+    await updateSeller(sellerId, { [field]: numValue })
   }
 
-  const handleTeamGoalChange = (field, value) => {
+  const handleTeamGoalChange = async (field, value) => {
     const numValue = parseFloat(value) || 0
-    setTeamGoal({ ...teamGoal, [field]: numValue })
+    await updateTeamGoal({ ...teamGoal, [field]: numValue })
   }
 
-  const handleAddSale = (sellerId) => {
+  const handleAddSale = async (sellerId) => {
     const value = parseFloat(saleInputs[sellerId]) || 0
     if (value <= 0) {
       alert('Insira um valor maior que zero')
       return
     }
-    setSellers(sellers.map((s) => {
-      if (s.id !== sellerId) return s
-      return {
-        ...s,
-        dailySales: s.dailySales + value,
-        monthlySales: s.monthlySales + value,
-        annualSales: s.annualSales + value,
-      }
-    }))
+    const seller = sellers.find(s => s.id === sellerId)
+    if (!seller) return
+    await updateSeller(sellerId, {
+      dailySales: (seller.dailySales || 0) + value,
+      monthlySales: (seller.monthlySales || 0) + value,
+      annualSales: (seller.annualSales || 0) + value,
+    })
     setLastAdded({ id: sellerId, value })
     setSaleInputs({ ...saleInputs, [sellerId]: '' })
     setTimeout(() => setLastAdded(null), 2000)
   }
 
-  const handleRemoveSale = (sellerId) => {
+  const handleRemoveSale = async (sellerId) => {
     const value = parseFloat(saleInputs[sellerId]) || 0
     if (value <= 0) {
       alert('Insira o valor que deseja remover')
       return
     }
-    setSellers(sellers.map((s) => {
-      if (s.id !== sellerId) return s
-      return {
-        ...s,
-        dailySales: Math.max(0, s.dailySales - value),
-        monthlySales: Math.max(0, s.monthlySales - value),
-        annualSales: Math.max(0, s.annualSales - value),
-      }
-    }))
+    const seller = sellers.find(s => s.id === sellerId)
+    if (!seller) return
+    await updateSeller(sellerId, {
+      dailySales: Math.max(0, (seller.dailySales || 0) - value),
+      monthlySales: Math.max(0, (seller.monthlySales || 0) - value),
+      annualSales: Math.max(0, (seller.annualSales || 0) - value),
+    })
     setLastRemoved({ id: sellerId, value })
     setSaleInputs({ ...saleInputs, [sellerId]: '' })
     setTimeout(() => setLastRemoved(null), 2000)
+  }
+
+  const handleInitializeData = async () => {
+    if (window.confirm('Isso ira popular o Firestore com os vendedores iniciais. Continuar?')) {
+      await initializeSellers()
+      await updateTeamGoal({ daily: 300000, monthly: 6000000, annual: 72000000 })
+      await updateSettings({ monthlyResetDay: 1, lastResetDate: null })
+      alert('Dados iniciais criados no Firestore!')
+    }
   }
 
   const quickValues = [100, 250, 500, 1000, 2500, 5000]
@@ -186,6 +179,17 @@ export function AdminPanel() {
     }).format(value)
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-cyan-400 font-medium">Carregando dados do Firestore...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
@@ -195,16 +199,26 @@ export function AdminPanel() {
               <span>⚙️</span>
               <span className="truncate">Painel do Gestor</span>
             </h1>
-            <p className="text-slate-400 text-[10px] sm:text-xs truncate">Viva Brasília — Representantes Revenda</p>
+            <p className="text-slate-400 text-[10px] sm:text-xs truncate">Viva Brasilia — Representantes Revenda</p>
           </div>
-          <Link
-            to="/tv"
-            className="flex-shrink-0 px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2 text-xs sm:text-sm font-medium border border-slate-700"
-          >
-            <span>📺</span>
-            <span className="hidden sm:inline">Voltar ao Painel</span>
-            <span className="sm:hidden">TV</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            {sellers.length === 0 && (
+              <button
+                onClick={handleInitializeData}
+                className="px-3 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/30 transition-colors text-xs font-medium border border-yellow-500/30"
+              >
+                Iniciar Dados
+              </button>
+            )}
+            <Link
+              to="/tv"
+              className="flex-shrink-0 px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2 text-xs sm:text-sm font-medium border border-slate-700"
+            >
+              <span>📺</span>
+              <span className="hidden sm:inline">Voltar ao Painel</span>
+              <span className="sm:hidden">TV</span>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -214,7 +228,7 @@ export function AdminPanel() {
             <div className="flex items-center gap-3 sm:gap-4">
               <h2 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
                 <span>📅</span>
-                Período:
+                Periodo:
               </h2>
               <div className="flex gap-1.5 sm:gap-2">
                 {periods.map((p) => (
@@ -239,7 +253,7 @@ export function AdminPanel() {
               <label className="text-[10px] sm:text-xs text-slate-400">Reset:</label>
               <select
                 value={settings.monthlyResetDay}
-                onChange={(e) => setSettings({ ...settings, monthlyResetDay: parseInt(e.target.value) })}
+                onChange={(e) => updateSettings({ ...settings, monthlyResetDay: parseInt(e.target.value) })}
                 className="px-2 sm:px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
               >
                 {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
@@ -258,7 +272,7 @@ export function AdminPanel() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               <div>
-                <label className="text-[10px] sm:text-xs text-slate-400 block mb-1">Meta Diária (R$)</label>
+                <label className="text-[10px] sm:text-xs text-slate-400 block mb-1">Meta Diaria (R$)</label>
                 <input
                   type="number"
                   value={bulkGoalDaily}
@@ -369,7 +383,7 @@ export function AdminPanel() {
 
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <div>
-                  <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Meta Diária</label>
+                  <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Meta Diaria</label>
                   <input
                     type="number"
                     value={formData.dailyGoal}
@@ -509,7 +523,7 @@ export function AdminPanel() {
             
             <div className="space-y-3">
               <div>
-                <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Meta Diária</label>
+                <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Meta Diaria</label>
                 <input
                   type="number"
                   value={teamGoal.daily}
@@ -547,8 +561,8 @@ export function AdminPanel() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {sellers.map((seller) => {
-              const currentSales = seller[`${period}Sales`]
-              const currentGoal = seller[`${period}Goal`]
+              const currentSales = seller[`${period}Sales`] || 0
+              const currentGoal = seller[`${period}Goal`] || 0
               const percentage = currentGoal > 0 
                 ? Math.min((currentSales / currentGoal) * 100, 100) 
                 : 0
@@ -693,7 +707,7 @@ export function AdminPanel() {
         <div className="mt-4 sm:mt-6 bg-slate-900/50 rounded-xl p-4 sm:p-5 border border-slate-800">
           <h2 className="text-xs sm:text-sm font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
             <span>📋</span>
-            Edição Avançada
+            Edicao Avancada
           </h2>
           
           <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -704,13 +718,13 @@ export function AdminPanel() {
                   <th className="pb-2 text-[10px] sm:text-xs font-medium">Vendas {periods.find(p => p.id === period)?.label}</th>
                   <th className="pb-2 text-[10px] sm:text-xs font-medium">Meta</th>
                   <th className="pb-2 text-[10px] sm:text-xs font-medium">Progresso</th>
-                  <th className="pb-2 text-[10px] sm:text-xs font-medium text-right">Ações</th>
+                  <th className="pb-2 text-[10px] sm:text-xs font-medium text-right">Acoes</th>
                 </tr>
               </thead>
               <tbody>
                 {sellers.map((seller) => {
-                  const currentSales = seller[`${period}Sales`]
-                  const currentGoal = seller[`${period}Goal`]
+                  const currentSales = seller[`${period}Sales`] || 0
+                  const currentGoal = seller[`${period}Goal`] || 0
                   const percentage = currentGoal > 0 
                     ? Math.min((currentSales / currentGoal) * 100, 100) 
                     : 0
@@ -731,7 +745,7 @@ export function AdminPanel() {
                       <td className="py-2 sm:py-3">
                         <input
                           type="number"
-                          value={seller[`${period}Sales`]}
+                          value={currentSales}
                           onChange={(e) => handleUpdateSales(seller.id, `${period}Sales`, e.target.value)}
                           className="w-20 sm:w-28 px-1.5 sm:px-2 py-1 bg-slate-800 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none text-[10px] sm:text-xs"
                         />
