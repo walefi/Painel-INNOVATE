@@ -5,7 +5,6 @@ import {
   onSnapshot,
   setDoc,
   addDoc,
-  updateDoc,
   deleteDoc,
   writeBatch,
   serverTimestamp,
@@ -109,7 +108,7 @@ export function useSellers() {
   const updateSeller = useCallback(async (sellerId, data) => {
     const { id: _ignore, ...rest } = data
     try {
-      await updateDoc(doc(db, SELLERS_COL, sellerId), rest)
+      await setDoc(doc(db, SELLERS_COL, sellerId), rest, { merge: true })
     } catch (err) {
       console.error('Erro ao atualizar vendedor:', err)
       alert('Erro ao salvar no Firestore. Verifique as regras de seguranca.')
@@ -122,8 +121,11 @@ export function useSellers() {
       await deleteDoc(doc(db, SELLERS_COL, sellerId))
     } catch (err) {
       console.error('Erro ao deletar vendedor:', err)
-      alert('Erro ao deletar no Firestore. Verifique as regras de seguranca.')
-      throw err
+      // Ignore "not found" errors
+      if (err.code !== 'not-found') {
+        alert('Erro ao deletar no Firestore.')
+        throw err
+      }
     }
   }, [])
 
@@ -132,12 +134,12 @@ export function useSellers() {
       const batch = writeBatch(db)
       updates.forEach(({ id, ...data }) => {
         const ref = doc(db, SELLERS_COL, id)
-        batch.update(ref, data)
+        batch.set(ref, data, { merge: true })
       })
       await batch.commit()
     } catch (err) {
       console.error('Erro ao atualizar em lote:', err)
-      alert('Erro ao salvar no Firestore. Verifique as regras de seguranca.')
+      alert('Erro ao salvar no Firestore.')
       throw err
     }
   }, [])
