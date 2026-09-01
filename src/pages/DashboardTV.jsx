@@ -1,10 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SellerCard } from '../components/SellerCard'
 import { Ranking } from '../components/Ranking'
 import { Clock } from '../components/Clock'
 import { MotivationalFooter } from '../components/MotivationalFooter'
+import { SellerCardTV } from '../components/SellerCardTV'
+import { ConfettiTrigger } from '../components/ConfettiTrigger'
+import { PodiumView } from '../components/PodiumView'
+import { MotivationView } from '../components/MotivationView'
+import { SalesChart } from '../components/SalesChart'
+import { AnimatedNumber } from '../components/AnimatedNumber'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useCarousel } from '../hooks/useCarousel'
+import { useAudioAlert } from '../hooks/useAudioAlert'
 import { initialSellers, initialTeamGoal, periods } from '../data/initialData'
 
 const backgroundImages = [
@@ -13,6 +20,9 @@ const backgroundImages = [
 ]
 
 const ADMIN_PASSWORD = 'admin123'
+const VIEW_COUNT = 3
+
+const viewLabels = ['Visao Geral', 'Podium', 'Motivacao']
 
 export function DashboardTV() {
   const [sellers] = useLocalStorage('metaVendedores_sellers', initialSellers)
@@ -26,6 +36,9 @@ export function DashboardTV() {
   const [passwordError, setPasswordError] = useState('')
   const navigate = useNavigate()
   const menuRef = useRef(null)
+
+  const { currentView, isTransitioning, goToView } = useCarousel(VIEW_COUNT, 30000)
+  useAudioAlert(sellers)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -90,7 +103,7 @@ export function DashboardTV() {
 
   const teamTotal = getTeamTotal()
   const teamGoalForPeriod = getTeamGoalForPeriod()
-  const teamPercentage = teamGoalForPeriod > 0 
+  const teamPercentage = teamGoalForPeriod > 0
     ? Math.min((teamTotal / teamGoalForPeriod) * 100, 100)
     : 0
 
@@ -101,8 +114,24 @@ export function DashboardTV() {
     }).format(value)
   }
 
+  const sortedSellers = [...sellers]
+    .filter(s => s.name !== 'Representantes')
+    .sort((a, b) => {
+      const getSales = (s) => {
+        switch (period) {
+          case 'daily': return s.dailySales
+          case 'monthly': return s.monthlySales
+          case 'annual': return s.annualSales
+          default: return s.dailySales
+        }
+      }
+      return getSales(b) - getSales(a)
+    })
+
   return (
     <div className="min-h-screen bg-slate-950">
+      <ConfettiTrigger teamPercentage={teamPercentage} />
+
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-900 rounded-xl border border-slate-700 p-5 sm:p-6 w-full max-w-sm shadow-2xl">
@@ -173,7 +202,7 @@ export function DashboardTV() {
               <span className="text-cyan-400">🎯</span>
               <span className="truncate">Painel de Metas</span>
             </h1>
-            <p className="text-slate-300 text-xs sm:text-sm mt-1 truncate">Viva Brasília — Representantes Revenda</p>
+            <p className="text-slate-300 text-xs sm:text-sm mt-1 truncate">Viva Brasilia — Representantes Revenda</p>
             
             <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3">
               {periods.map((p) => (
@@ -246,22 +275,32 @@ export function DashboardTV() {
           <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
             <div className="text-center">
               <p className="text-slate-400 text-[10px] sm:text-xs">Total de Vendas</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold text-white mt-1 truncate">{formatCurrency(teamTotal)}</p>
+              <AnimatedNumber
+                value={teamTotal}
+                format="currency"
+                className="text-lg sm:text-xl md:text-2xl font-bold text-white mt-1 truncate block"
+                duration={2000}
+              />
             </div>
             <div className="text-center">
               <p className="text-slate-400 text-[10px] sm:text-xs">Meta da Equipe</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold text-cyan-400 mt-1 truncate">{formatCurrency(teamGoalForPeriod)}</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-cyan-400 mt-1 truncate">
+                {formatCurrency(teamGoalForPeriod)}
+              </p>
             </div>
             <div className="text-center">
               <p className="text-slate-400 text-[10px] sm:text-xs">Progresso</p>
-              <p className={`text-lg sm:text-xl md:text-2xl font-bold mt-1 ${
-                teamPercentage >= 100 ? 'text-green-400' :
-                teamPercentage >= 80 ? 'text-cyan-400' :
-                teamPercentage >= 50 ? 'text-orange-400' :
-                'text-slate-300'
-              }`}>
-                {Math.round(teamPercentage)}%
-              </p>
+              <AnimatedNumber
+                value={teamPercentage}
+                format="percent"
+                className={`text-lg sm:text-xl md:text-2xl font-bold mt-1 block ${
+                  teamPercentage >= 100 ? 'text-green-400' :
+                  teamPercentage >= 80 ? 'text-cyan-400' :
+                  teamPercentage >= 50 ? 'text-orange-400' :
+                  'text-slate-300'
+                }`}
+                duration={2000}
+              />
             </div>
           </div>
 
@@ -279,27 +318,73 @@ export function DashboardTV() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
-          <div className="lg:col-span-2">
-            <h2 className="text-base sm:text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
-              <span>🏆</span>
-              Vendedores
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              {sellers.map((seller, index) => (
-                <SellerCard
-                  key={seller.id}
-                  seller={seller}
-                  period={period}
-                  rank={index + 1}
-                />
-              ))}
-            </div>
-          </div>
+        <div className="mb-4 flex items-center justify-center gap-2">
+          {viewLabels.map((label, i) => (
+            <button
+              key={i}
+              onClick={() => goToView(i)}
+              className={`
+                px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-300
+                ${currentView === i
+                  ? 'bg-cyan-500 text-white shadow-[0_0_10px_rgba(34,211,238,0.4)]'
+                  : 'bg-slate-800/60 text-slate-400 hover:bg-slate-700/70 border border-slate-700/50'
+                }
+              `}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-          <div className="lg:col-span-1">
-            <Ranking sellers={sellers} period={period} />
-          </div>
+        <div className={`
+          transition-all duration-500 ease-in-out
+          ${isTransitioning ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'}
+        `}>
+          {currentView === 0 && (
+            <div className="animate-slide-up">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+                <div className="lg:col-span-2">
+                  <h2 className="text-base sm:text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                    <span>🏆</span>
+                    Vendedores
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                    {sortedSellers.map((seller, index) => (
+                      <SellerCardTV
+                        key={seller.id}
+                        seller={seller}
+                        period={period}
+                        rank={index + 1}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-4">
+                    <SalesChart teamPercentage={teamPercentage} period={period} />
+                  </div>
+                </div>
+
+                <div className="lg:col-span-1">
+                  <Ranking sellers={sellers} period={period} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentView === 1 && (
+            <div className="animate-slide-up">
+              <PodiumView sellers={sellers} period={period} />
+            </div>
+          )}
+
+          {currentView === 2 && (
+            <div className="animate-slide-up">
+              <MotivationView
+                teamPercentage={teamPercentage}
+                teamTotal={teamTotal}
+                teamGoal={teamGoalForPeriod}
+              />
+            </div>
+          )}
         </div>
       </div>
 

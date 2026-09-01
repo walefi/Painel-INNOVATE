@@ -50,7 +50,9 @@ export function Ranking({ sellers, period }) {
           const phrase = getMotivationalPhrase(index, sortedSellers.length)
           const sales = getPeriodSales(seller)
           const isFirst = index === 0
-          const isCustomAvatar = seller.avatar && seller.avatar.startsWith('data:')
+          const hasPhoto = seller.avatarUrl && seller.avatarUrl.trim() !== ''
+          const hasDataAvatar = seller.avatar && seller.avatar.startsWith('data:')
+          const initials = seller.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
           
           return (
             <div
@@ -58,7 +60,7 @@ export function Ranking({ sellers, period }) {
               className={`
                 flex items-center gap-3 p-3 rounded-lg border transition-all duration-300
                 ${phrase.bg}
-                ${isFirst ? 'shadow-[0_0_15px_rgba(234,179,8,0.15)]' : ''}
+                ${isFirst ? 'neon-pulse border-teal-400/50' : ''}
               `}
             >
               <div className={`
@@ -73,10 +75,14 @@ export function Ranking({ sellers, period }) {
 
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  {isCustomAvatar ? (
-                    <img src={seller.avatar} alt={seller.name} className="w-6 h-6 rounded object-cover" />
+                  {hasPhoto ? (
+                    <img src={seller.avatarUrl} alt={seller.name} className="w-6 h-6 rounded-full object-cover" />
+                  ) : hasDataAvatar ? (
+                    <img src={seller.avatar} alt={seller.name} className="w-6 h-6 rounded-full object-cover" />
                   ) : (
-                    <span className="text-lg">{seller.avatar}</span>
+                    <div className="w-6 h-6 rounded-full bg-slate-700/60 flex items-center justify-center text-[10px] font-bold text-slate-300">
+                      {initials}
+                    </div>
                   )}
                   <span className="text-white font-medium text-sm">{seller.name}</span>
                 </div>

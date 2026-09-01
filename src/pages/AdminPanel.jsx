@@ -13,9 +13,12 @@ export function AdminPanel() {
     id: null,
     name: '',
     avatar: '👤',
+    avatarUrl: '',
     dailyGoal: 5000,
     monthlyGoal: 100000,
     annualGoal: 1200000,
+    badges: [],
+    manualTags: [],
   })
 
   const [saleInputs, setSaleInputs] = useState({})
@@ -33,9 +36,12 @@ export function AdminPanel() {
       id: null,
       name: '',
       avatar: '👤',
+      avatarUrl: '',
       dailyGoal: 5000,
       monthlyGoal: 100000,
       annualGoal: 1200000,
+      badges: [],
+      manualTags: [],
     })
   }
 
@@ -58,9 +64,12 @@ export function AdminPanel() {
       id: seller.id,
       name: seller.name,
       avatar: seller.avatar,
+      avatarUrl: seller.avatarUrl || '',
       dailyGoal: seller.dailyGoal,
       monthlyGoal: seller.monthlyGoal,
       annualGoal: seller.annualGoal,
+      badges: seller.badges || [],
+      manualTags: seller.manualTags || [],
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -89,6 +98,9 @@ export function AdminPanel() {
         dailySales: 0,
         monthlySales: 0,
         annualSales: 0,
+        avatarUrl: formData.avatarUrl || '',
+        badges: formData.badges || [],
+        manualTags: formData.manualTags || [],
       }])
     }
     resetForm()
@@ -338,6 +350,23 @@ export function AdminPanel() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">URL da Foto (opcional)</label>
+                <input
+                  type="url"
+                  value={formData.avatarUrl}
+                  onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                  placeholder="https://exemplo.com/foto.jpg"
+                />
+                {formData.avatarUrl && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <img src={formData.avatarUrl} alt="Preview URL" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover" onError={(e) => e.target.style.display='none'} />
+                    <span className="text-[10px] sm:text-xs text-slate-400">Preview da URL</span>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <div>
                   <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Meta Diária</label>
@@ -366,6 +395,90 @@ export function AdminPanel() {
                     className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Badges Especiais</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Maior Venda do Dia 💸', 'Estrela da Semana ⭐', 'Speed Demon ⚡', 'Top Performer 🎯'].map((badge) => (
+                    <button
+                      key={badge}
+                      type="button"
+                      onClick={() => {
+                        const currentBadges = formData.badges || []
+                        const newBadges = currentBadges.includes(badge)
+                          ? currentBadges.filter(b => b !== badge)
+                          : [...currentBadges, badge]
+                        setFormData({ ...formData, badges: newBadges })
+                      }}
+                      className={`
+                        px-2 py-1 text-[10px] sm:text-xs rounded-lg border transition-all
+                        ${(formData.badges || []).includes(badge)
+                          ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400'
+                          : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
+                        }
+                      `}
+                    >
+                      {badge}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Tags Manuais</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="manualTagInput"
+                    className="flex-1 px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                    placeholder="Ex: Cliente VIP, Urgente..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        const input = e.target
+                        const value = input.value.trim()
+                        if (value && !(formData.manualTags || []).includes(value)) {
+                          setFormData({ ...formData, manualTags: [...(formData.manualTags || []), value] })
+                          input.value = ''
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.getElementById('manualTagInput')
+                      const value = input?.value.trim()
+                      if (value && !(formData.manualTags || []).includes(value)) {
+                        setFormData({ ...formData, manualTags: [...(formData.manualTags || []), value] })
+                        if (input) input.value = ''
+                      }
+                    }}
+                    className="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors text-xs"
+                  >
+                    + Tag
+                  </button>
+                </div>
+                {(formData.manualTags || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {formData.manualTags.map((tag, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] sm:text-xs rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, manualTags: formData.manualTags.filter(t => t !== tag) })}
+                          className="text-cyan-500 hover:text-red-400 ml-0.5"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2">
@@ -489,6 +602,25 @@ export function AdminPanel() {
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
+
+                  {(seller.badges && seller.badges.length > 0) && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {seller.badges.map((badge, i) => (
+                        <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {(seller.manualTags && seller.manualTags.length > 0) && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {seller.manualTags.map((tag, i) => (
+                        <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap gap-1 mb-3">
                     {quickValues.map((val) => (
