@@ -7,80 +7,76 @@ import {
   addDoc,
   deleteDoc,
   writeBatch,
-  serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { initialSellers, initialTeamGoal, initialSettings } from '../data/initialData'
 
 const SELLERS_COL = 'sellers'
-const SETTINGS_DOC = 'settings/config'
 const TEAM_GOAL_DOC = 'teamGoals/main'
+const SETTINGS_DOC = 'settings/config'
 
-// Check if Firestore connection is working
-let firestoreAvailable = null
+const LS_SELLERS = 'painel_sellers'
+const LS_GOAL = 'painel_teamGoal'
+const LS_SETTINGS = 'painel_settings'
 
-async function checkFirestore() {
-  if (firestoreAvailable !== null) return firestoreAvailable
+function loadLS(key, fallback) {
   try {
-    const { enableNetwork } = await import('firebase/firestore')
-    await enableNetwork(db)
-    firestoreAvailable = true
-  } catch (e) {
-    console.warn('Firestore indisponivel, usando dados locais:', e.message)
-    firestoreAvailable = false
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
+  } catch {
+    return fallback
   }
-  return firestoreAvailable
+}
+
+function saveLS(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch { /* quota exceeded */ }
+}
+
+function syncFromFirestore(data, lsKey, setFn) {
+  if (data && data.length > 0) {
+    setFn(data)
+    saveLS(lsKey, data)
+    return true
+  }
+  return false
 }
 
 export function useSellers() {
-  const [sellers, setSellers] = useState([])
+  const [sellers, setSellers] = useState(() => loadLS(LS_SELLERS, []))
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
 
   useEffect(() => {
     let unsub = null
     let timeout = null
 
-    const startListener = async () => {
-      try {
-        unsub = onSnapshot(
-          collection(db, SELLERS_COL),
-          (snapshot) => {
-            const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-            if (data.length > 0) {
-              setSellers(data)
-            } else {
-              // Collection empty — use initial data as display defaults
-              setSellers(initialSellers.map((s, i) => ({ ...s, id: String(i + 1) })))
-            }
-            setLoading(false)
-            setError(null)
-          },
-          (err) => {
-            console.error('Firestore sellers error:', err.message)
-            setError(err.message)
-            // Fallback to local data
-            setSellers(initialSellers.map((s, i) => ({ ...s, id: String(i + 1) })))
-            setLoading(false)
-          }
-        )
-      } catch (err) {
-        console.error('Failed to start sellers listener:', err)
-        setSellers(initialSellers.map((s, i) => ({ ...s, id: String(i + 1) })))
+    unsub = onSnapshot(
+      collection(db, SELLERS_COL),
+      (snapshot) => {
+        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+        syncFromFirestore(data, LS_SELLERS, setSellers)
+        setLoading(false)
+      },
+      (err) => {
+        console.error('Firestore sellers error:', err.message)
+        const ls = loadLS(LS_SELLERS, [])
+        if (ls.length > 0) {
+          setSellers(ls)
+        } else {
+          setSellers(initialSellers.map((s, i) => ({ ...s, id: `local_${i + 1}` })))
+        }
         setLoading(false)
       }
-    }
+    )
 
-    // Safety timeout: if loading takes too long, use local data
     timeout = setTimeout(() => {
       if (loading) {
-        console.warn('Firestore timeout — usando dados locais')
-        setSellers(initialSellers.map((s, i) => ({ ...s, id: String(i + 1) })))
+        const ls = loadLS(LS_SELLERS, [])
+        setSellers(ls.length > 0 ? ls : initialSellers.map((s, i) => ({ ...s, id: `local_${i + 1}` })))
         setLoading(false)
       }
     }, 5000)
-
-    startListener()
 
     return () => {
       if (unsub) unsub()
@@ -90,114 +86,84 @@ export function useSellers() {
 
   const addSeller = useCallback(async (sellerData) => {
     const { id: _ignore, ...rest } = sellerData
-    try {
-      await addDoc(collection(db, SELLERS_COL), {
-        ...rest,
-        dailySales: 0,
-        monthlySales: 0,
-        annualSales: 0,
-        createdAt: serverTimestamp(),
-      })
-    } catch (err) {
-      console.error('Erro ao adicionar vendedor:', err)
-      alert('Erro ao salvar no Firestore. Verifique as regras de seguranca.')
-      throw err
-    }
+    const docRef = await addDoc(collection(db, SELLERS_COL), {
+      ...rest,
+      dailySales: 0,
+      monthlySales: 0,
+      annualSales: 0,
+    })
+    return docRef.id
   }, [])
 
   const updateSeller = useCallback(async (sellerId, data) => {
     const { id: _ignore, ...rest } = data
-    try {
-      await setDoc(doc(db, SELLERS_COL, sellerId), rest, { merge: true })
-    } catch (err) {
-      console.error('Erro ao atualizar vendedor:', err)
-      alert('Erro ao salvar no Firestore. Verifique as regras de seguranca.')
-      throw err
-    }
+    await setDoc(doc(db, SELLERS_COL, sellerId), rest, { merge: true })
   }, [])
 
   const deleteSeller = useCallback(async (sellerId) => {
     try {
       await deleteDoc(doc(db, SELLERS_COL, sellerId))
     } catch (err) {
-      console.error('Erro ao deletar vendedor:', err)
-      // Ignore "not found" errors
-      if (err.code !== 'not-found') {
-        alert('Erro ao deletar no Firestore.')
-        throw err
-      }
+      if (err.code !== 'not-found') throw err
     }
   }, [])
 
   const bulkUpdateSellers = useCallback(async (updates) => {
-    try {
-      const batch = writeBatch(db)
-      updates.forEach(({ id, ...data }) => {
-        const ref = doc(db, SELLERS_COL, id)
-        batch.set(ref, data, { merge: true })
-      })
-      await batch.commit()
-    } catch (err) {
-      console.error('Erro ao atualizar em lote:', err)
-      alert('Erro ao salvar no Firestore.')
-      throw err
-    }
+    const batch = writeBatch(db)
+    updates.forEach(({ id, ...data }) => {
+      batch.set(doc(db, SELLERS_COL, id), data, { merge: true })
+    })
+    await batch.commit()
   }, [])
 
   const initializeSellers = useCallback(async () => {
-    try {
-      const batch = writeBatch(db)
-      initialSellers.forEach((seller) => {
-        const ref = doc(collection(db, SELLERS_COL))
-        batch.set(ref, {
-          ...seller,
-          createdAt: serverTimestamp(),
-        })
+    const promises = initialSellers.map((seller) => {
+      return setDoc(doc(db, SELLERS_COL, `seller_${seller.id}`), {
+        name: seller.name,
+        avatarUrl: seller.avatarUrl || '',
+        dailyGoal: seller.dailyGoal,
+        monthlyGoal: seller.monthlyGoal,
+        annualGoal: seller.annualGoal,
+        dailySales: 0,
+        monthlySales: 0,
+        annualSales: 0,
+        badges: [],
+        manualTags: [],
       })
-      await batch.commit()
-    } catch (err) {
-      console.error('Erro ao inicializar dados:', err)
-      alert('Erro ao criar dados no Firestore. Verifique as regras de seguranca.')
-      throw err
-    }
+    })
+    await Promise.all(promises)
   }, [])
 
-  return { sellers, loading, error, addSeller, updateSeller, deleteSeller, bulkUpdateSellers, initializeSellers }
+  return { sellers, loading, addSeller, updateSeller, deleteSeller, bulkUpdateSellers, initializeSellers }
 }
 
 export function useSettings() {
-  const [settings, setSettings] = useState(initialSettings)
+  const [settings, setSettings] = useState(() => loadLS(LS_SETTINGS, initialSettings))
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let unsub = null
     let timeout = null
 
-    const startListener = async () => {
-      try {
-        unsub = onSnapshot(
-          doc(db, 'settings', 'config'),
-          (snapshot) => {
-            if (snapshot.exists()) {
-              setSettings(snapshot.data())
-            }
-            setLoading(false)
-          },
-          (err) => {
-            console.error('Firestore settings error:', err.message)
-            setLoading(false)
-          }
-        )
-      } catch (err) {
+    unsub = onSnapshot(
+      doc(db, 'settings', 'config'),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data()
+          setSettings(data)
+          saveLS(LS_SETTINGS, data)
+        }
+        setLoading(false)
+      },
+      (err) => {
+        console.error('Firestore settings error:', err.message)
         setLoading(false)
       }
-    }
+    )
 
     timeout = setTimeout(() => {
       if (loading) setLoading(false)
     }, 5000)
-
-    startListener()
 
     return () => {
       if (unsub) unsub()
@@ -206,51 +172,41 @@ export function useSettings() {
   }, [])
 
   const updateSettings = useCallback(async (data) => {
-    try {
-      await setDoc(doc(db, 'settings', 'config'), data, { merge: true })
-    } catch (err) {
-      console.error('Erro ao atualizar settings:', err)
-      alert('Erro ao salvar no Firestore.')
-      throw err
-    }
+    await setDoc(doc(db, 'settings', 'config'), data, { merge: true })
+    setSettings(data)
+    saveLS(LS_SETTINGS, data)
   }, [])
 
   return { settings, loading, updateSettings }
 }
 
 export function useTeamGoal() {
-  const [teamGoal, setTeamGoal] = useState(initialTeamGoal)
+  const [teamGoal, setTeamGoal] = useState(() => loadLS(LS_GOAL, initialTeamGoal))
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let unsub = null
     let timeout = null
 
-    const startListener = async () => {
-      try {
-        unsub = onSnapshot(
-          doc(db, 'teamGoals', 'main'),
-          (snapshot) => {
-            if (snapshot.exists()) {
-              setTeamGoal(snapshot.data())
-            }
-            setLoading(false)
-          },
-          (err) => {
-            console.error('Firestore teamGoal error:', err.message)
-            setLoading(false)
-          }
-        )
-      } catch (err) {
+    unsub = onSnapshot(
+      doc(db, 'teamGoals', 'main'),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data()
+          setTeamGoal(data)
+          saveLS(LS_GOAL, data)
+        }
+        setLoading(false)
+      },
+      (err) => {
+        console.error('Firestore teamGoal error:', err.message)
         setLoading(false)
       }
-    }
+    )
 
     timeout = setTimeout(() => {
       if (loading) setLoading(false)
     }, 5000)
-
-    startListener()
 
     return () => {
       if (unsub) unsub()
@@ -259,13 +215,9 @@ export function useTeamGoal() {
   }, [])
 
   const updateTeamGoal = useCallback(async (data) => {
-    try {
-      await setDoc(doc(db, 'teamGoals', 'main'), data, { merge: true })
-    } catch (err) {
-      console.error('Erro ao atualizar teamGoal:', err)
-      alert('Erro ao salvar no Firestore.')
-      throw err
-    }
+    await setDoc(doc(db, 'teamGoals', 'main'), data, { merge: true })
+    setTeamGoal(data)
+    saveLS(LS_GOAL, data)
   }, [])
 
   return { teamGoal, loading, updateTeamGoal }

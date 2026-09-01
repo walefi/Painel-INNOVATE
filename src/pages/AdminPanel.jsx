@@ -52,11 +52,16 @@ export function AdminPanel() {
       monthlyGoal: bulkGoalMonthly ? parseInt(bulkGoalMonthly) : seller.monthlyGoal,
       annualGoal: bulkGoalAnnual ? parseInt(bulkGoalAnnual) : seller.annualGoal,
     }))
-    await bulkUpdateSellers(updates)
-    setBulkGoalDaily('')
-    setBulkGoalMonthly('')
-    setBulkGoalAnnual('')
-    alert('Metas atualizadas para todos os vendedores!')
+    try {
+      await bulkUpdateSellers(updates)
+      setBulkGoalDaily('')
+      setBulkGoalMonthly('')
+      setBulkGoalAnnual('')
+      alert('Metas atualizadas para todos os vendedores!')
+    } catch (err) {
+      console.error('Erro ao atualizar metas:', err)
+      alert('Erro ao atualizar: ' + err.message)
+    }
   }
 
   const handleEdit = (seller) => {
@@ -76,7 +81,12 @@ export function AdminPanel() {
 
   const handleDelete = async (id) => {
     if (window.confirm('Tem certeza que deseja remover este vendedor?')) {
-      await deleteSeller(id)
+      try {
+        await deleteSeller(id)
+      } catch (err) {
+        console.error('Erro ao deletar:', err)
+        alert('Erro ao remover: ' + err.message)
+      }
     }
   }
 
@@ -86,12 +96,17 @@ export function AdminPanel() {
       alert('Por favor, insira o nome do vendedor')
       return
     }
-    if (formData.id) {
-      await updateSeller(formData.id, formData)
-    } else {
-      await addSeller(formData)
+    try {
+      if (formData.id) {
+        await updateSeller(formData.id, formData)
+      } else {
+        await addSeller(formData)
+      }
+      resetForm()
+    } catch (err) {
+      console.error('Erro ao salvar vendedor:', err)
+      alert('Erro ao salvar: ' + err.message)
     }
-    resetForm()
   }
 
   const handleAvatarUpload = (e, sellerId) => {
@@ -117,12 +132,20 @@ export function AdminPanel() {
 
   const handleUpdateSales = async (sellerId, field, value) => {
     const numValue = parseFloat(value) || 0
-    await updateSeller(sellerId, { [field]: numValue })
+    try {
+      await updateSeller(sellerId, { [field]: numValue })
+    } catch (err) {
+      console.error('Erro ao atualizar venda:', err)
+    }
   }
 
   const handleTeamGoalChange = async (field, value) => {
     const numValue = parseFloat(value) || 0
-    await updateTeamGoal({ ...teamGoal, [field]: numValue })
+    try {
+      await updateTeamGoal({ ...teamGoal, [field]: numValue })
+    } catch (err) {
+      console.error('Erro ao atualizar meta:', err)
+    }
   }
 
   const handleAddSale = async (sellerId) => {
@@ -133,14 +156,19 @@ export function AdminPanel() {
     }
     const seller = sellers.find(s => s.id === sellerId)
     if (!seller) return
-    await updateSeller(sellerId, {
-      dailySales: (seller.dailySales || 0) + value,
-      monthlySales: (seller.monthlySales || 0) + value,
-      annualSales: (seller.annualSales || 0) + value,
-    })
-    setLastAdded({ id: sellerId, value })
-    setSaleInputs({ ...saleInputs, [sellerId]: '' })
-    setTimeout(() => setLastAdded(null), 2000)
+    try {
+      await updateSeller(sellerId, {
+        dailySales: (seller.dailySales || 0) + value,
+        monthlySales: (seller.monthlySales || 0) + value,
+        annualSales: (seller.annualSales || 0) + value,
+      })
+      setLastAdded({ id: sellerId, value })
+      setSaleInputs({ ...saleInputs, [sellerId]: '' })
+      setTimeout(() => setLastAdded(null), 2000)
+    } catch (err) {
+      console.error('Erro ao registrar venda:', err)
+      alert('Erro ao salvar: ' + err.message)
+    }
   }
 
   const handleRemoveSale = async (sellerId) => {
@@ -151,22 +179,32 @@ export function AdminPanel() {
     }
     const seller = sellers.find(s => s.id === sellerId)
     if (!seller) return
-    await updateSeller(sellerId, {
-      dailySales: Math.max(0, (seller.dailySales || 0) - value),
-      monthlySales: Math.max(0, (seller.monthlySales || 0) - value),
-      annualSales: Math.max(0, (seller.annualSales || 0) - value),
-    })
-    setLastRemoved({ id: sellerId, value })
-    setSaleInputs({ ...saleInputs, [sellerId]: '' })
-    setTimeout(() => setLastRemoved(null), 2000)
+    try {
+      await updateSeller(sellerId, {
+        dailySales: Math.max(0, (seller.dailySales || 0) - value),
+        monthlySales: Math.max(0, (seller.monthlySales || 0) - value),
+        annualSales: Math.max(0, (seller.annualSales || 0) - value),
+      })
+      setLastRemoved({ id: sellerId, value })
+      setSaleInputs({ ...saleInputs, [sellerId]: '' })
+      setTimeout(() => setLastRemoved(null), 2000)
+    } catch (err) {
+      console.error('Erro ao remover venda:', err)
+      alert('Erro ao salvar: ' + err.message)
+    }
   }
 
   const handleInitializeData = async () => {
     if (window.confirm('Isso ira popular o Firestore com os vendedores iniciais. Continuar?')) {
-      await initializeSellers()
-      await updateTeamGoal({ daily: 300000, monthly: 6000000, annual: 72000000 })
-      await updateSettings({ monthlyResetDay: 1, lastResetDate: null })
-      alert('Dados iniciais criados no Firestore!')
+      try {
+        await initializeSellers()
+        await updateTeamGoal({ daily: 300000, monthly: 6000000, annual: 72000000 })
+        await updateSettings({ monthlyResetDay: 1, lastResetDate: null })
+        alert('Dados criados no Firestore!')
+      } catch (err) {
+        console.error('Erro ao inicializar:', err)
+        alert('Erro ao criar dados: ' + err.message)
+      }
     }
   }
 
@@ -253,7 +291,13 @@ export function AdminPanel() {
               <label className="text-[10px] sm:text-xs text-slate-400">Reset:</label>
               <select
                 value={settings.monthlyResetDay}
-                onChange={(e) => updateSettings({ ...settings, monthlyResetDay: parseInt(e.target.value) })}
+                onChange={(e) => {
+                  try {
+                    updateSettings({ ...settings, monthlyResetDay: parseInt(e.target.value) })
+                  } catch (err) {
+                    console.error('Erro ao atualizar settings:', err)
+                  }
+                }}
                 className="px-2 sm:px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
               >
                 {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
