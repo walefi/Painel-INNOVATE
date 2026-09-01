@@ -9,7 +9,7 @@ export function useAudioAlert(sellers) {
   const audioRef = useRef(null)
 
   useEffect(() => {
-    audioRef.current = new Audio('/bell.mp3')
+    audioRef.current = new Audio('/assets/bell.mp3')
     audioRef.current.volume = 0.5
   }, [])
 
