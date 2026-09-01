@@ -27,7 +27,7 @@ export function SalesChart({ teamPercentage, period }) {
       return (
         <div className="bg-slate-800/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-slate-700">
           <p className="text-slate-400 text-xs">{label}</p>
-          <p className="text-cyan-400 text-sm font-bold font-space">
+          <p className="text-[#2DD4BF] text-sm font-bold font-space">
             {Math.round(payload[0].value)}%
           </p>
         </div>
@@ -47,8 +47,8 @@ export function SalesChart({ teamPercentage, period }) {
           <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorProgress" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#00ffff" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#00ffff" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#2DD4BF" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#2DD4BF" stopOpacity={0}/>
               </linearGradient>
             </defs>
             <XAxis
@@ -67,7 +67,7 @@ export function SalesChart({ teamPercentage, period }) {
             <Area
               type="monotone"
               dataKey="progress"
-              stroke="#00ffff"
+              stroke="#2DD4BF"
               strokeWidth={2}
               fillOpacity={1}
               fill="url(#colorProgress)"

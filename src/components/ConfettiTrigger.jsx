@@ -37,7 +37,7 @@ export function ConfettiTrigger({ teamPercentage }) {
       recycle={false}
       numberOfPieces={300}
       gravity={0.3}
-      colors={['#00ffff', '#ffd700', '#ff8c00', '#22c55e', '#3b82f6', '#a855f7']}
+      colors={['#2DD4BF', '#E8A33D', '#ff8c00', '#22c55e', '#3b82f6', '#a855f7']}
     />
   )
 }

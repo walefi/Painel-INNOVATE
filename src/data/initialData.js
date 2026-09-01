@@ -132,9 +132,9 @@ export const motivationalPhrases = [
 
 // Badges disponíveis para atribuição manual
 export const availableBadges = [
-  { id: 'maior-venda-dia', label: 'Maior Venda do Dia 💸', color: 'text-yellow-400' },
+  { id: 'maior-venda-dia', label: 'Maior Venda do Dia 💸', color: 'text-[#E8A33D]' },
   { id: 'estrela-semanal', label: 'Estrela da Semana ⭐', color: 'text-purple-400' },
-  { id: 'speed-demon', label: 'Speed Demon ⚡', color: 'text-cyan-400' },
+  { id: 'speed-demon', label: 'Speed Demon ⚡', color: 'text-[#2DD4BF]' },
   { id: 'top-performer', label: 'Top Performer 🎯', color: 'text-green-400' },
 ]
 

@@ -135,8 +135,8 @@ export function DashboardTV() {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-cyan-400 font-medium">Conectando ao Firestore...</p>
+          <div className="w-12 h-12 border-4 border-[#2DD4BF] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[#2DD4BF] font-medium">Conectando ao Firestore...</p>
           <p className="text-slate-500 text-sm mt-1">Sincronizando dados em tempo real</p>
         </div>
       </div>
@@ -163,7 +163,7 @@ export function DashboardTV() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Digite a senha"
                 autoFocus
-                className="w-full px-4 py-2.5 bg-slate-800 rounded-lg border border-slate-600 focus:border-cyan-500 focus:outline-none text-sm mb-3"
+                className="w-full px-4 py-2.5 bg-slate-800 rounded-lg border border-slate-600               focus:border-[#2DD4BF] focus:outline-none text-sm mb-3"
               />
               {passwordError && (
                 <p className="text-red-400 text-xs mb-3 text-center animate-pulse">{passwordError}</p>
@@ -178,7 +178,7 @@ export function DashboardTV() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2 bg-[#2DD4BF] text-slate-900 rounded-lg hover:bg-[#2DD4BF]/80 transition-colors text-sm font-medium"
                 >
                   Entrar
                 </button>
@@ -203,8 +203,8 @@ export function DashboardTV() {
             <div 
               key={i}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                i === bgIndex 
-                  ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' 
+                i === bgIndex
+                  ? 'bg-[#2DD4BF] shadow-[0_0_8px_rgba(45,212,191,0.8)]'
                   : 'bg-slate-500/50'
               }`}
             />
@@ -213,11 +213,11 @@ export function DashboardTV() {
 
         <div className="relative z-10 h-full flex items-center justify-between px-3 sm:px-4 md:px-6 py-4">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
-              <span className="text-cyan-400">🎯</span>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2 font-space">
+              <span className="text-[#2DD4BF]">🎯</span>
               <span className="truncate">Painel de Metas</span>
             </h1>
-            <p className="text-slate-300 text-xs sm:text-sm mt-1 truncate">Viva Brasilia — Representantes Revenda</p>
+            <p className="text-slate-300 text-xs sm:text-sm mt-1 truncate">Innovate — Representantes Revenda</p>
             
             <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3">
               {periods.map((p) => (
@@ -227,7 +227,7 @@ export function DashboardTV() {
                   className={`
                     px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200
                     ${period === p.id
-                      ? 'bg-cyan-500 text-white shadow-[0_0_12px_rgba(34,211,238,0.4)]'
+                      ? 'bg-[#2DD4BF] text-slate-900 shadow-[0_0_12px_rgba(45,212,191,0.4)]'
                       : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700/70 border border-slate-600/50'
                     }
                   `}
@@ -288,7 +288,7 @@ export function DashboardTV() {
             </div>
             <div className="text-center">
               <p className="text-slate-400 text-[10px] sm:text-xs">Meta da Equipe</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold text-cyan-400 mt-1 truncate">
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-[#2DD4BF] mt-1 truncate font-space">
                 {formatCurrency(teamGoalForPeriod)}
               </p>
             </div>
@@ -299,8 +299,8 @@ export function DashboardTV() {
                 format="percent"
                 className={`text-lg sm:text-xl md:text-2xl font-bold mt-1 block ${
                   teamPercentage >= 100 ? 'text-green-400' :
-                  teamPercentage >= 80 ? 'text-cyan-400' :
-                  teamPercentage >= 50 ? 'text-orange-400' :
+                  teamPercentage >= 80 ? 'text-[#2DD4BF]' :
+                  teamPercentage >= 50 ? 'text-[#E8A33D]' :
                   'text-slate-300'
                 }`}
                 duration={2000}
@@ -314,8 +314,8 @@ export function DashboardTV() {
                 teamPercentage >= 100 
                   ? 'bg-gradient-to-r from-green-400 to-emerald-500 shadow-[0_0_15px_rgba(74,222,128,0.5)]'
                   : teamPercentage >= 80
-                  ? 'bg-gradient-to-r from-cyan-400 to-teal-500 shadow-[0_0_12px_rgba(34,211,238,0.4)]'
-                  : 'bg-gradient-to-r from-blue-500 to-cyan-500'
+                  ? 'bg-gradient-to-r from-[#2DD4BF] to-teal-500 shadow-[0_0_12px_rgba(45,212,191,0.4)]'
+                  : 'bg-gradient-to-r from-blue-500 to-[#2DD4BF]'
               }`}
               style={{ width: `${teamPercentage}%` }}
             />
@@ -330,7 +330,7 @@ export function DashboardTV() {
               className={`
                 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-300
                 ${currentView === i
-                  ? 'bg-cyan-500 text-white shadow-[0_0_10px_rgba(34,211,238,0.4)]'
+                  ? 'bg-[#2DD4BF] text-slate-900 shadow-[0_0_10px_rgba(45,212,191,0.4)]'
                   : 'bg-slate-800/60 text-slate-400 hover:bg-slate-700/70 border border-slate-700/50'
                 }
               `}
@@ -348,7 +348,7 @@ export function DashboardTV() {
             <div className="animate-slide-up">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
                 <div className="lg:col-span-2">
-                  <h2 className="text-base sm:text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-bold text-[#2DD4BF] mb-3 flex items-center gap-2 font-space">
                     <span>🏆</span>
                     Vendedores
                   </h2>

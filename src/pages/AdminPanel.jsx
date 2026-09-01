@@ -183,8 +183,8 @@ export function AdminPanel() {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-cyan-400 font-medium">Carregando dados do Firestore...</p>
+          <div className="w-12 h-12 border-4 border-[#2DD4BF] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[#2DD4BF] font-medium">Carregando dados do Firestore...</p>
         </div>
       </div>
     )
@@ -195,11 +195,11 @@ export function AdminPanel() {
       <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg md:text-xl font-bold text-cyan-400 flex items-center gap-2">
+            <h1 className="text-base sm:text-lg md:text-xl font-bold text-[#2DD4BF] flex items-center gap-2 font-space">
               <span>⚙️</span>
               <span className="truncate">Painel do Gestor</span>
             </h1>
-            <p className="text-slate-400 text-[10px] sm:text-xs truncate">Viva Brasilia — Representantes Revenda</p>
+            <p className="text-slate-400 text-[10px] sm:text-xs truncate">Innovate — Representantes Revenda</p>
           </div>
           <div className="flex items-center gap-2">
             {sellers.length === 0 && (
@@ -238,7 +238,7 @@ export function AdminPanel() {
                     className={`
                       px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all
                       ${period === p.id
-                        ? 'bg-cyan-500 text-white'
+                        ? 'bg-[#2DD4BF] text-slate-900'
                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
                       }
                     `}
@@ -254,7 +254,7 @@ export function AdminPanel() {
               <select
                 value={settings.monthlyResetDay}
                 onChange={(e) => updateSettings({ ...settings, monthlyResetDay: parseInt(e.target.value) })}
-                className="px-2 sm:px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                className="px-2 sm:px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
               >
                 {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
                   <option key={day} value={day}>Dia {day}</option>
@@ -277,7 +277,7 @@ export function AdminPanel() {
                   type="number"
                   value={bulkGoalDaily}
                   onChange={(e) => setBulkGoalDaily(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   placeholder="Ex: 50000"
                 />
               </div>
@@ -287,7 +287,7 @@ export function AdminPanel() {
                   type="number"
                   value={bulkGoalMonthly}
                   onChange={(e) => setBulkGoalMonthly(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   placeholder="Ex: 1000000"
                 />
               </div>
@@ -297,14 +297,14 @@ export function AdminPanel() {
                   type="number"
                   value={bulkGoalAnnual}
                   onChange={(e) => setBulkGoalAnnual(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   placeholder="Ex: 12000000"
                 />
               </div>
               <div className="flex items-end">
                 <button
                   onClick={applyBulkGoals}
-                  className="w-full px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors text-xs sm:text-sm font-medium"
+                  className="w-full px-4 py-2 bg-[#2DD4BF] text-slate-900 rounded-lg hover:bg-[#2DD4BF]/80 transition-colors text-xs sm:text-sm font-medium"
                 >
                   Aplicar a Todos
                 </button>
@@ -325,7 +325,7 @@ export function AdminPanel() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   placeholder="Nome do vendedor"
                 />
               </div>
@@ -370,7 +370,7 @@ export function AdminPanel() {
                   type="url"
                   value={formData.avatarUrl}
                   onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   placeholder="https://exemplo.com/foto.jpg"
                 />
                 {formData.avatarUrl && (
@@ -388,7 +388,7 @@ export function AdminPanel() {
                     type="number"
                     value={formData.dailyGoal}
                     onChange={(e) => setFormData({ ...formData, dailyGoal: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   />
                 </div>
                 <div>
@@ -397,7 +397,7 @@ export function AdminPanel() {
                     type="number"
                     value={formData.monthlyGoal}
                     onChange={(e) => setFormData({ ...formData, monthlyGoal: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   />
                 </div>
                 <div>
@@ -406,7 +406,7 @@ export function AdminPanel() {
                     type="number"
                     value={formData.annualGoal}
                     onChange={(e) => setFormData({ ...formData, annualGoal: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   />
                 </div>
               </div>
@@ -428,7 +428,7 @@ export function AdminPanel() {
                       className={`
                         px-2 py-1 text-[10px] sm:text-xs rounded-lg border transition-all
                         ${(formData.badges || []).includes(badge)
-                          ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400'
+                          ? 'border-[#E8A33D]/50 bg-[#E8A33D]/10 text-[#E8A33D]'
                           : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
                         }
                       `}
@@ -445,7 +445,7 @@ export function AdminPanel() {
                   <input
                     type="text"
                     id="manualTagInput"
-                    className="flex-1 px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                    className="flex-1 px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                     placeholder="Ex: Cliente VIP, Urgente..."
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -479,13 +479,13 @@ export function AdminPanel() {
                     {formData.manualTags.map((tag, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] sm:text-xs rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] sm:text-xs rounded-full bg-[#2DD4BF]/10 text-[#2DD4BF] border border-[#2DD4BF]/30"
                       >
                         {tag}
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, manualTags: formData.manualTags.filter(t => t !== tag) })}
-                          className="text-cyan-500 hover:text-red-400 ml-0.5"
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, manualTags: formData.manualTags.filter(t => t !== tag) })}
+                      className="text-[#2DD4BF] hover:text-red-400 ml-0.5"
                         >
                           ×
                         </button>
@@ -498,7 +498,7 @@ export function AdminPanel() {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors text-xs sm:text-sm font-medium"
+                  className="flex-1 px-4 py-2 bg-[#2DD4BF] text-slate-900 rounded-lg hover:bg-[#2DD4BF]/80 transition-colors text-xs sm:text-sm font-medium"
                 >
                   {formData.id ? 'Salvar' : 'Adicionar'}
                 </button>
@@ -528,7 +528,7 @@ export function AdminPanel() {
                   type="number"
                   value={teamGoal.daily}
                   onChange={(e) => handleTeamGoalChange('daily', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                 />
               </div>
               <div>
@@ -537,7 +537,7 @@ export function AdminPanel() {
                   type="number"
                   value={teamGoal.monthly}
                   onChange={(e) => handleTeamGoalChange('monthly', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                 />
               </div>
               <div>
@@ -546,7 +546,7 @@ export function AdminPanel() {
                   type="number"
                   value={teamGoal.annual}
                   onChange={(e) => handleTeamGoalChange('annual', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                 />
               </div>
             </div>
@@ -597,8 +597,8 @@ export function AdminPanel() {
                     </div>
                     <span className={`text-xs sm:text-sm font-bold flex-shrink-0 ${
                       percentage >= 100 ? 'text-green-400' :
-                      percentage >= 80 ? 'text-cyan-400' :
-                      percentage >= 50 ? 'text-orange-400' :
+                    percentage >= 80 ? 'text-[#2DD4BF]' :
+                    percentage >= 50 ? 'text-[#E8A33D]' :
                       'text-slate-300'
                     }`}>
                       {Math.round(percentage)}%
@@ -609,9 +609,9 @@ export function AdminPanel() {
                     <div
                       className={`h-full rounded-full transition-all ${
                         percentage >= 100 ? 'bg-green-500' :
-                        percentage >= 80 ? 'bg-cyan-500' :
-                        percentage >= 50 ? 'bg-orange-500' :
-                        'bg-blue-500'
+                    percentage >= 80 ? 'bg-[#2DD4BF]' :
+                    percentage >= 50 ? 'bg-[#E8A33D]' :
+                    'bg-blue-500'
                       }`}
                       style={{ width: `${percentage}%` }}
                     />
@@ -620,7 +620,7 @@ export function AdminPanel() {
                   {(seller.badges && seller.badges.length > 0) && (
                     <div className="flex flex-wrap gap-1 mb-2">
                       {seller.badges.map((badge, i) => (
-                        <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                        <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-[#E8A33D]/10 text-[#E8A33D] border border-[#E8A33D]/20">
                           {badge}
                         </span>
                       ))}
@@ -629,7 +629,7 @@ export function AdminPanel() {
                   {(seller.manualTags && seller.manualTags.length > 0) && (
                     <div className="flex flex-wrap gap-1 mb-2">
                       {seller.manualTags.map((tag, i) => (
-                        <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                        <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-[#2DD4BF]/10 text-[#2DD4BF] border border-[#2DD4BF]/20">
                           {tag}
                         </span>
                       ))}
@@ -654,7 +654,7 @@ export function AdminPanel() {
                       value={saleInputs[seller.id] || ''}
                       onChange={(e) => setSaleInputs({ ...saleInputs, [seller.id]: e.target.value })}
                       placeholder="Valor"
-                      className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 bg-slate-700 rounded-lg border border-slate-600 focus:border-cyan-500 focus:outline-none text-xs sm:text-sm"
+                      className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 bg-slate-700 rounded-lg border border-slate-600                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
@@ -688,7 +688,7 @@ export function AdminPanel() {
                   )}
 
                   <div className="mt-2 pt-2 border-t border-slate-700/50">
-                    <label className="flex items-center justify-center w-full py-1.5 bg-slate-700/30 rounded-lg border border-dashed border-slate-600 cursor-pointer hover:border-cyan-500/50 transition-colors">
+                    <label className="flex items-center justify-center w-full py-1.5 bg-slate-700/30 rounded-lg border border-dashed border-slate-600 cursor-pointer hover:border-[#2DD4BF]/50 transition-colors">
                       <input
                         type="file"
                         accept="image/*"
@@ -759,8 +759,8 @@ export function AdminPanel() {
                             <div
                               className={`h-full rounded-full ${
                                 percentage >= 100 ? 'bg-green-500' :
-                                percentage >= 80 ? 'bg-cyan-500' :
-                                'bg-blue-500'
+                percentage >= 80 ? 'bg-[#2DD4BF]' :
+                'bg-blue-500'
                               }`}
                               style={{ width: `${percentage}%` }}
                             />

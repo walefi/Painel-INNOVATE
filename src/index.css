@@ -1,20 +1,16 @@
-/* Importa as fontes do Google Fonts - deve vir antes do Tailwind */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
-/* Configuração do tema personalizado */
 @theme {
-  --color-cyber-dark: #0a0a1a;
-  --color-cyber-blue: #0066cc;
-  --color-cyber-cyan: #00ffff;
-  --color-cyber-gold: #ffd700;
-  --color-cyber-orange: #ff8c00;
+  --color-innovate-dark: #0a0a1a;
+  --color-innovate-cyan: #2DD4BF;
+  --color-innovate-gold: #E8A33D;
+  --color-innovate-teal: #14b8a6;
   --font-space: 'Space Grotesk', system-ui, sans-serif;
   --font-inter: 'Inter', system-ui, sans-serif;
 }
 
-/* Estilos globais */
 * {
   margin: 0;
   padding: 0;
@@ -34,12 +30,6 @@ html {
   }
 }
 
-@media (max-width: 380px) {
-  html {
-    font-size: 13px;
-  }
-}
-
 body {
   background-color: #0a0a1a;
   color: white;
@@ -51,82 +41,97 @@ body {
   min-height: 100vh;
 }
 
-/* Animações personalizadas */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 20px rgba(45, 212, 191, 0.3);
   }
   50% {
-    box-shadow: 0 0 40px rgba(0, 255, 255, 0.6);
+    box-shadow: 0 0 40px rgba(45, 212, 191, 0.6);
   }
 }
 
-@keyframes float {
+@keyframes neon-pulse {
   0%, 100% {
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.4), 0 0 20px rgba(45, 212, 191, 0.2);
+    border-color: rgba(45, 212, 191, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(45, 212, 191, 0.6), 0 0 30px rgba(45, 212, 191, 0.4);
+    border-color: rgba(45, 212, 191, 0.8);
+  }
+}
+
+@keyframes slide-up-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
     transform: translateY(0);
   }
-  50% {
-    transform: translateY(-10px);
-  }
 }
 
-@keyframes led-flicker {
+@keyframes podium-glow {
   0%, 100% {
-    opacity: 1;
+    box-shadow: 0 0 20px rgba(232, 163, 61, 0.3);
   }
   50% {
-    opacity: 0.8;
+    box-shadow: 0 0 40px rgba(232, 163, 61, 0.5), 0 0 80px rgba(232, 163, 61, 0.2);
   }
 }
 
-/* Classe para efeito de brilho LED */
+@keyframes trophy-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-8px) scale(1.1); }
+  50% { transform: translateY(0) scale(1); }
+  75% { transform: translateY(-4px) scale(1.05); }
+}
+
+@keyframes fire-flicker {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  25% { transform: scale(1.1) rotate(-5deg); opacity: 0.9; }
+  50% { transform: scale(1.15) rotate(3deg); opacity: 1; }
+  75% { transform: scale(1.05) rotate(-2deg); opacity: 0.95; }
+}
+
+@keyframes counter-glow {
+  0%, 100% { text-shadow: 0 0 10px rgba(45, 212, 191, 0.3); }
+  50% { text-shadow: 0 0 20px rgba(45, 212, 191, 0.6), 0 0 40px rgba(45, 212, 191, 0.2); }
+}
+
 .led-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Classe para animação de flutuação */
-.float-animation {
-  animation: float 3s ease-in-out infinite;
+.neon-pulse {
+  animation: neon-pulse 2s ease-in-out infinite;
 }
 
-/* Classe para efeito de flicker LED */
-.led-flicker {
-  animation: led-flicker 0.5s ease-in-out infinite;
+.animate-slide-up {
+  animation: slide-up-fade 0.6s ease-out forwards;
 }
 
-/* Estilos para a barra de progresso com gradiente */
-.progress-gradient {
-  background: linear-gradient(90deg, #0066cc, #00ffff);
+.animate-podium-glow {
+  animation: podium-glow 3s ease-in-out infinite;
 }
 
-.progress-gradient-success {
-  background: linear-gradient(90deg, #22c55e, #10b981);
-  box-shadow: 0 0 20px rgba(74, 222, 128, 0.6);
+.animate-trophy-bounce {
+  animation: trophy-bounce 2s ease-in-out infinite;
 }
 
-.progress-gradient-warning {
-  background: linear-gradient(90deg, #00ffff, #14b8a6);
-  box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);
+.animate-fire-flicker {
+  animation: fire-flicker 0.8s ease-in-out infinite;
 }
 
-/* Estilos para cards com efeito de vidro */
-.glass-card {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 255, 255, 0.2);
+.animate-counter-glow {
+  animation: counter-glow 2s ease-in-out infinite;
 }
 
-/* Estilo para textos com brilho */
-.text-glow {
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-}
-
-/* Estilo para números usando Space Grotesk */
 .font-space {
   font-family: var(--font-space);
 }
 
-/* Scrollbar personalizada */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -145,138 +150,6 @@ body {
   background: #475569;
 }
 
-/* Utilitários responsivos */
-@layer utilities {
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  
-  .safe-top {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-}
-
-/* === GAMIFICATION ANIMATIONS === */
-
-@keyframes neon-pulse {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(45, 212, 191, 0.4), 0 0 20px rgba(45, 212, 191, 0.2), 0 0 40px rgba(45, 212, 191, 0.1);
-    border-color: rgba(45, 212, 191, 0.6);
-  }
-  50% {
-    box-shadow: 0 0 15px rgba(45, 212, 191, 0.6), 0 0 30px rgba(45, 212, 191, 0.4), 0 0 60px rgba(45, 212, 191, 0.2);
-    border-color: rgba(45, 212, 191, 0.8);
-  }
-}
-
-@keyframes slide-up-fade {
-  0% {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scale-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes podium-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(234, 179, 8, 0.5), 0 0 80px rgba(234, 179, 8, 0.2);
-  }
-}
-
-@keyframes trophy-bounce {
-  0%, 100% { transform: translateY(0) scale(1); }
-  25% { transform: translateY(-8px) scale(1.1); }
-  50% { transform: translateY(0) scale(1); }
-  75% { transform: translateY(-4px) scale(1.05); }
-}
-
-@keyframes fire-flicker {
-  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
-  25% { transform: scale(1.1) rotate(-5deg); opacity: 0.9; }
-  50% { transform: scale(1.15) rotate(3deg); opacity: 1; }
-  75% { transform: scale(1.05) rotate(-2deg); opacity: 0.95; }
-}
-
-@keyframes view-transition-out {
-  0% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(0.95); }
-}
-
-@keyframes view-transition-in {
-  0% { opacity: 0; transform: scale(1.05); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes counter-glow {
-  0%, 100% { text-shadow: 0 0 10px rgba(0, 255, 255, 0.3); }
-  50% { text-shadow: 0 0 20px rgba(0, 255, 255, 0.6), 0 0 40px rgba(0, 255, 255, 0.2); }
-}
-
-.neon-pulse {
-  animation: neon-pulse 2s ease-in-out infinite;
-}
-
-.animate-slide-up {
-  animation: slide-up-fade 0.6s ease-out forwards;
-}
-
-.animate-scale-in {
-  animation: scale-in 0.4s ease-out forwards;
-}
-
-.animate-podium-glow {
-  animation: podium-glow 3s ease-in-out infinite;
-}
-
-.animate-trophy-bounce {
-  animation: trophy-bounce 2s ease-in-out infinite;
-}
-
-.animate-fire-flicker {
-  animation: fire-flicker 0.8s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-}
-
-.animate-counter-glow {
-  animation: counter-glow 2s ease-in-out infinite;
-}
-
-.view-transition-out {
-  animation: view-transition-out 0.5s ease-in forwards;
-}
-
-.view-transition-in {
-  animation: view-transition-in 0.5s ease-out forwards;
-}
-
-/* Tocuche amigo - aumenta áreas de toque em mobile */
 @media (max-width: 640px) {
   button, a, input, select, textarea {
     min-height: 36px;

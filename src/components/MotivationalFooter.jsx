@@ -22,7 +22,7 @@ export function MotivationalFooter() {
         <div className="inline-block bg-slate-800/50 backdrop-blur-sm rounded-full px-4 sm:px-6 py-1.5 sm:py-2 border border-slate-700/50">
           <p
             className={`
-              text-xs sm:text-sm md:text-base text-cyan-300 font-medium
+              text-xs sm:text-sm md:text-base text-[#2DD4BF] font-medium
               transition-all duration-500 ease-in-out
               ${isAnimating ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}
             `}

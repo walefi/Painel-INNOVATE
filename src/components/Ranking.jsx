@@ -17,15 +17,15 @@ export function Ranking({ sellers, period }) {
     const percentage = ((total - position) / total) * 100
 
     if (position === 1) {
-      return { text: 'Voando baixo!', icon: '🏆', color: 'text-yellow-400', bg: 'bg-yellow-500/15 border-yellow-500/40' }
+      return { text: 'Voando baixo!', icon: '🏆', color: 'text-[#E8A33D]', bg: 'bg-[#E8A33D]/15 border-[#E8A33D]/40' }
     } else if (position === 2) {
       return { text: 'Garçando o topo!', icon: '🥈', color: 'text-slate-200', bg: 'bg-slate-400/10 border-slate-400/30' }
     } else if (position === 3) {
-      return { text: 'No pódio!', icon: '🥉', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/30' }
+      return { text: 'No pódio!', icon: '🥉', color: 'text-[#E8A33D]', bg: 'bg-[#E8A33D]/10 border-[#E8A33D]/30' }
     } else if (percentage >= 70) {
-      return { text: 'Falta pouco!', icon: '🚀', color: 'text-cyan-400', bg: 'bg-slate-800/50 border-slate-700/50' }
+      return { text: 'Falta pouco!', icon: '🚀', color: 'text-[#2DD4BF]', bg: 'bg-slate-800/50 border-slate-700/50' }
     } else if (percentage >= 40) {
-      return { text: 'Acelera!', icon: '🔥', color: 'text-orange-400', bg: 'bg-slate-800/50 border-slate-700/50' }
+      return { text: 'Acelera!', icon: '🔥', color: 'text-[#E8A33D]', bg: 'bg-slate-800/50 border-slate-700/50' }
     } else {
       return { text: 'Quase lá, acelera!', icon: '💪', color: 'text-slate-300', bg: 'bg-slate-800/50 border-slate-700/50' }
     }
@@ -40,7 +40,7 @@ export function Ranking({ sellers, period }) {
 
   return (
     <div className="bg-slate-900/50 backdrop-blur-sm rounded-xl border border-slate-800 p-4">
-      <h2 className="text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
+      <h2 className="text-lg font-bold text-[#2DD4BF] mb-3 flex items-center gap-2 font-space">
         <span>📊</span>
         Ranking da Equipe
       </h2>
@@ -60,13 +60,13 @@ export function Ranking({ sellers, period }) {
               className={`
                 flex items-center gap-3 p-3 rounded-lg border transition-all duration-300
                 ${phrase.bg}
-                ${isFirst ? 'neon-pulse border-teal-400/50' : ''}
+                ${isFirst ? 'neon-pulse border-[#2DD4BF]/50' : ''}
               `}
             >
               <div className={`
                 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm
                 ${isFirst 
-                  ? 'bg-yellow-500/25 text-yellow-400 border border-yellow-500/40' 
+                  ? 'bg-[#E8A33D]/25 text-[#E8A33D] border border-[#E8A33D]/40' 
                   : 'bg-slate-700/60 text-slate-300'
                 }
               `}>
