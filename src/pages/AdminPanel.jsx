@@ -29,6 +29,12 @@ export function AdminPanel() {
   const [bulkGoalMonthly, setBulkGoalMonthly] = useState('')
   const [bulkGoalAnnual, setBulkGoalAnnual] = useState('')
 
+  // ---- sprint/prize state ----
+  const [sprintPrizeInput, setSprintPrizeInput] = useState('')
+  const [sprintDuration, setSprintDuration] = useState(2)
+  const [mainPrizeNameInput, setMainPrizeNameInput] = useState('')
+  const [mainPrizeImageInput, setMainPrizeImageInput] = useState('')
+
   const avatarOptions = ['👨‍💼', '👩‍💼', '👨‍💻', '👩‍🔬', '🧑‍💼', '👨‍🔧', '👩‍🎨', '🧑‍🚀']
 
   const resetForm = () => {
@@ -199,12 +205,69 @@ export function AdminPanel() {
       try {
         await initializeSellers()
         await updateTeamGoal({ daily: 300000, monthly: 6000000, annual: 72000000 })
-        await updateSettings({ monthlyResetDay: 1, lastResetDate: null })
+        await updateSettings({
+          monthlyResetDay: 1,
+          lastResetDate: null,
+          sprintActive: false,
+          sprintEnd: null,
+          sprintPrize: '',
+          mainPrizeName: '',
+          mainPrizeImage: '',
+        })
         alert('Dados criados no Firestore!')
       } catch (err) {
         console.error('Erro ao inicializar:', err)
         alert('Erro ao criar dados: ' + err.message)
       }
+    }
+  }
+
+  // ---- sprint handlers ----
+  const handleStartSprint = async () => {
+    if (!sprintPrizeInput.trim()) {
+      alert('Defina o premio do sprint!')
+      return
+    }
+    const endTime = Date.now() + sprintDuration * 60 * 60 * 1000
+    try {
+      await updateSettings({
+        ...settings,
+        sprintActive: true,
+        sprintEnd: endTime,
+        sprintPrize: sprintPrizeInput.trim(),
+      })
+      alert(`Sprint iniciado! Termina em ${sprintDuration}h`)
+    } catch (err) {
+      console.error('Erro ao iniciar sprint:', err)
+      alert('Erro ao iniciar sprint: ' + err.message)
+    }
+  }
+
+  const handleStopSprint = async () => {
+    try {
+      await updateSettings({
+        ...settings,
+        sprintActive: false,
+        sprintEnd: null,
+        sprintPrize: '',
+      })
+      alert('Sprint encerrado!')
+    } catch (err) {
+      console.error('Erro ao parar sprint:', err)
+    }
+  }
+
+  const handleSavePrize = async () => {
+    try {
+      await updateSettings({
+        ...settings,
+        mainPrizeName: mainPrizeNameInput.trim(),
+        mainPrizeImage: mainPrizeImageInput.trim(),
+      })
+      alert('Premio salvo com sucesso!')
+    } catch (err) {
+      console.error('Erro ao salvar premio:', err)
+      alert('Erro ao salvar: ' + err.message)
     }
   }
 
@@ -298,7 +361,7 @@ export function AdminPanel() {
                     console.error('Erro ao atualizar settings:', err)
                   }
                 }}
-                className="px-2 sm:px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                className="px-2 sm:px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
               >
                 {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
                   <option key={day} value={day}>Dia {day}</option>
@@ -321,7 +384,7 @@ export function AdminPanel() {
                   type="number"
                   value={bulkGoalDaily}
                   onChange={(e) => setBulkGoalDaily(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   placeholder="Ex: 50000"
                 />
               </div>
@@ -331,7 +394,7 @@ export function AdminPanel() {
                   type="number"
                   value={bulkGoalMonthly}
                   onChange={(e) => setBulkGoalMonthly(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   placeholder="Ex: 1000000"
                 />
               </div>
@@ -341,7 +404,7 @@ export function AdminPanel() {
                   type="number"
                   value={bulkGoalAnnual}
                   onChange={(e) => setBulkGoalAnnual(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   placeholder="Ex: 12000000"
                 />
               </div>
@@ -361,7 +424,7 @@ export function AdminPanel() {
               <span>{formData.id ? '✏️' : '➕'}</span>
               {formData.id ? 'Editar Vendedor' : 'Novo Vendedor'}
             </h2>
-            
+
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Nome</label>
@@ -369,7 +432,7 @@ export function AdminPanel() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   placeholder="Nome do vendedor"
                 />
               </div>
@@ -414,7 +477,7 @@ export function AdminPanel() {
                   type="url"
                   value={formData.avatarUrl}
                   onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   placeholder="https://exemplo.com/foto.jpg"
                 />
                 {formData.avatarUrl && (
@@ -432,7 +495,7 @@ export function AdminPanel() {
                     type="number"
                     value={formData.dailyGoal}
                     onChange={(e) => setFormData({ ...formData, dailyGoal: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   />
                 </div>
                 <div>
@@ -441,7 +504,7 @@ export function AdminPanel() {
                     type="number"
                     value={formData.monthlyGoal}
                     onChange={(e) => setFormData({ ...formData, monthlyGoal: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   />
                 </div>
                 <div>
@@ -450,7 +513,7 @@ export function AdminPanel() {
                     type="number"
                     value={formData.annualGoal}
                     onChange={(e) => setFormData({ ...formData, annualGoal: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                    className="w-full px-2 sm:px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                   />
                 </div>
               </div>
@@ -489,7 +552,7 @@ export function AdminPanel() {
                   <input
                     type="text"
                     id="manualTagInput"
-                    className="flex-1 px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                    className="flex-1 px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                     placeholder="Ex: Cliente VIP, Urgente..."
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -526,10 +589,10 @@ export function AdminPanel() {
                         className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] sm:text-xs rounded-full bg-[#2DD4BF]/10 text-[#2DD4BF] border border-[#2DD4BF]/30"
                       >
                         {tag}
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, manualTags: formData.manualTags.filter(t => t !== tag) })}
-                      className="text-[#2DD4BF] hover:text-red-400 ml-0.5"
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, manualTags: formData.manualTags.filter(t => t !== tag) })}
+                          className="text-[#2DD4BF] hover:text-red-400 ml-0.5"
                         >
                           ×
                         </button>
@@ -564,7 +627,7 @@ export function AdminPanel() {
               <span>🎯</span>
               Metas da Equipe
             </h2>
-            
+
             <div className="space-y-3">
               <div>
                 <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Meta Diaria</label>
@@ -572,7 +635,7 @@ export function AdminPanel() {
                   type="number"
                   value={teamGoal.daily}
                   onChange={(e) => handleTeamGoalChange('daily', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                 />
               </div>
               <div>
@@ -581,7 +644,7 @@ export function AdminPanel() {
                   type="number"
                   value={teamGoal.monthly}
                   onChange={(e) => handleTeamGoalChange('monthly', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                 />
               </div>
               <div>
@@ -590,9 +653,116 @@ export function AdminPanel() {
                   type="number"
                   value={teamGoal.annual}
                   onChange={(e) => handleTeamGoalChange('annual', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* ---- Sprint Relampago ---- */}
+          <div className="bg-slate-900/50 rounded-xl p-4 sm:p-5 border border-slate-800">
+            <h2 className="text-xs sm:text-sm font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
+              <span>⚡</span>
+              Sprint Relampago
+            </h2>
+
+            {settings?.sprintActive && settings?.sprintEnd && settings.sprintEnd > Date.now() ? (
+              <div className="space-y-3">
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                  <p className="text-red-400 font-bold text-sm">Sprint Ativo!</p>
+                  <p className="text-white text-xs mt-1">
+                    Premio: {settings.sprintPrize}
+                  </p>
+                  <p className="text-slate-400 text-[10px] mt-1">
+                    Termina: {new Date(settings.sprintEnd).toLocaleString('pt-BR')}
+                  </p>
+                </div>
+                <button
+                  onClick={handleStopSprint}
+                  className="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-xs sm:text-sm font-medium border border-red-500/30"
+                >
+                  Encerrar Sprint
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Premio do Sprint</label>
+                  <input
+                    type="text"
+                    value={sprintPrizeInput}
+                    onChange={(e) => setSprintPrizeInput(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                    placeholder="Ex: Ifood de R$50, Churrasco..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Duracao (horas)</label>
+                  <select
+                    value={sprintDuration}
+                    onChange={(e) => setSprintDuration(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  >
+                    {[1, 2, 3, 4, 6, 8].map((h) => (
+                      <option key={h} value={h}>{h}h</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={handleStartSprint}
+                  className="w-full px-4 py-2 bg-[#E8A33D] text-slate-900 rounded-lg hover:bg-[#E8A33D]/80 transition-colors text-xs sm:text-sm font-medium"
+                >
+                  Iniciar Sprint
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ---- Configuracao do Premio ---- */}
+          <div className="bg-slate-900/50 rounded-xl p-4 sm:p-5 border border-slate-800">
+            <h2 className="text-xs sm:text-sm font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
+              <span>🏆</span>
+              Premio da Equipe
+            </h2>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Nome do Premio</label>
+                <input
+                  type="text"
+                  value={mainPrizeNameInput || settings?.mainPrizeName || ''}
+                  onChange={(e) => setMainPrizeNameInput(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  placeholder="Ex: Churrasco de Sexta"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">URL da Imagem (opcional)</label>
+                <input
+                  type="url"
+                  value={mainPrizeImageInput || settings?.mainPrizeImage || ''}
+                  onChange={(e) => setMainPrizeImageInput(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 rounded-lg border border-slate-700 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                  placeholder="https://exemplo.com/premio.jpg"
+                />
+                {(mainPrizeImageInput || settings?.mainPrizeImage) && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <img
+                      src={mainPrizeImageInput || settings?.mainPrizeImage}
+                      alt="Preview"
+                      className="w-12 h-12 rounded-lg object-cover border border-slate-700"
+                      onError={(e) => e.target.style.display='none'}
+                    />
+                    <span className="text-[10px] text-slate-400">Preview do premio</span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={handleSavePrize}
+                className="w-full px-4 py-2 bg-[#2DD4BF] text-slate-900 rounded-lg hover:bg-[#2DD4BF]/80 transition-colors text-xs sm:text-sm font-medium"
+              >
+                Salvar Premio
+              </button>
             </div>
           </div>
         </div>
@@ -602,23 +772,23 @@ export function AdminPanel() {
             <span>💰</span>
             Registrar Vendas
           </h2>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {sellers.map((seller) => {
               const currentSales = seller[`${period}Sales`] || 0
               const currentGoal = seller[`${period}Goal`] || 0
-              const percentage = currentGoal > 0 
-                ? Math.min((currentSales / currentGoal) * 100, 100) 
+              const percentage = currentGoal > 0
+                ? Math.min((currentSales / currentGoal) * 100, 100)
                 : 0
               const isCustomAvatar = seller.avatar && seller.avatar.startsWith('data:')
 
               return (
-                <div 
+                <div
                   key={seller.id}
                   className={`
                     bg-slate-800/50 rounded-xl p-3 sm:p-4 border transition-all
-                    ${lastAdded?.id === seller.id 
-                      ? 'border-green-500/50 bg-green-500/5' 
+                    ${lastAdded?.id === seller.id
+                      ? 'border-green-500/50 bg-green-500/5'
                       : lastRemoved?.id === seller.id
                       ? 'border-red-500/50 bg-red-500/5'
                       : 'border-slate-700/50'
@@ -641,8 +811,8 @@ export function AdminPanel() {
                     </div>
                     <span className={`text-xs sm:text-sm font-bold flex-shrink-0 ${
                       percentage >= 100 ? 'text-green-400' :
-                    percentage >= 80 ? 'text-[#2DD4BF]' :
-                    percentage >= 50 ? 'text-[#E8A33D]' :
+                      percentage >= 80 ? 'text-[#2DD4BF]' :
+                      percentage >= 50 ? 'text-[#E8A33D]' :
                       'text-slate-300'
                     }`}>
                       {Math.round(percentage)}%
@@ -653,9 +823,9 @@ export function AdminPanel() {
                     <div
                       className={`h-full rounded-full transition-all ${
                         percentage >= 100 ? 'bg-green-500' :
-                    percentage >= 80 ? 'bg-[#2DD4BF]' :
-                    percentage >= 50 ? 'bg-[#E8A33D]' :
-                    'bg-blue-500'
+                        percentage >= 80 ? 'bg-[#2DD4BF]' :
+                        percentage >= 50 ? 'bg-[#E8A33D]' :
+                        'bg-blue-500'
                       }`}
                       style={{ width: `${percentage}%` }}
                     />
@@ -698,7 +868,7 @@ export function AdminPanel() {
                       value={saleInputs[seller.id] || ''}
                       onChange={(e) => setSaleInputs({ ...saleInputs, [seller.id]: e.target.value })}
                       placeholder="Valor"
-                      className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 bg-slate-700 rounded-lg border border-slate-600                   focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                      className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 bg-slate-700 rounded-lg border border-slate-600 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
@@ -753,7 +923,7 @@ export function AdminPanel() {
             <span>📋</span>
             Edicao Avancada
           </h2>
-          
+
           <div className="overflow-x-auto -mx-4 sm:mx-0">
             <table className="w-full min-w-[500px]">
               <thead>
@@ -769,8 +939,8 @@ export function AdminPanel() {
                 {sellers.map((seller) => {
                   const currentSales = seller[`${period}Sales`] || 0
                   const currentGoal = seller[`${period}Goal`] || 0
-                  const percentage = currentGoal > 0 
-                    ? Math.min((currentSales / currentGoal) * 100, 100) 
+                  const percentage = currentGoal > 0
+                    ? Math.min((currentSales / currentGoal) * 100, 100)
                     : 0
                   const isCustomAvatar = seller.avatar && seller.avatar.startsWith('data:')
 
@@ -803,8 +973,8 @@ export function AdminPanel() {
                             <div
                               className={`h-full rounded-full ${
                                 percentage >= 100 ? 'bg-green-500' :
-                percentage >= 80 ? 'bg-[#2DD4BF]' :
-                'bg-blue-500'
+                                percentage >= 80 ? 'bg-[#2DD4BF]' :
+                                'bg-blue-500'
                               }`}
                               style={{ width: `${percentage}%` }}
                             />

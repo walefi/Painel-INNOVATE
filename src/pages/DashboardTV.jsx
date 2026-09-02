@@ -9,9 +9,14 @@ import { PodiumView } from '../components/PodiumView'
 import { MotivationView } from '../components/MotivationView'
 import { SalesChart } from '../components/SalesChart'
 import { AnimatedNumber } from '../components/AnimatedNumber'
+import { OvertakeAlert } from '../components/OvertakeAlert'
+import { BreakingNewsOverlay } from '../components/BreakingNewsOverlay'
+import { SprintBanner } from '../components/SprintBanner'
+import { PrizeSlide } from '../components/PrizeSlide'
 import { useSellers, useTeamGoal, useSettings } from '../hooks/useFirestore'
 import { useCarousel } from '../hooks/useCarousel'
 import { useAudioAlert } from '../hooks/useAudioAlert'
+import { usePrevious } from '../hooks/usePrevious'
 import { periods } from '../data/initialData'
 
 const backgroundImages = [
@@ -20,19 +25,18 @@ const backgroundImages = [
 ]
 
 const ADMIN_PASSWORD = 'admin123'
-const VIEW_COUNT = 3
+const VIEW_COUNT = 4
+const SUPER_SALE_THRESHOLD = 5000
 
-const viewLabels = ['Visao Geral', 'Podium', 'Motivacao']
+const viewLabels = ['Visao Geral', 'Podium', 'Motivacao', 'Premio']
 
 // ---------- helpers seguros ----------
 
-/** Protege divisao por zero */
 function safeDivide(numerator, denominator, fallback = 0) {
   if (!denominator || denominator === 0) return fallback
   return numerator / denominator
 }
 
-/** Retorna vendas de um seller para o periodo, com fallback */
 function getPeriodSales(seller, period) {
   if (!seller) return 0
   switch (period) {
@@ -43,7 +47,6 @@ function getPeriodSales(seller, period) {
   }
 }
 
-/** Retorna meta de um seller para o periodo, com fallback */
 function getPeriodGoal(seller, period) {
   if (!seller) return 0
   switch (period) {
@@ -58,7 +61,7 @@ export function DashboardTV() {
   // ---- hooks do Firestore ----
   const { sellers: rawSellers, loading: sellersLoading } = useSellers()
   const { teamGoal: rawTeamGoal, loading: goalLoading } = useTeamGoal()
-  const { loading: settingsLoading } = useSettings()
+  const { settings, loading: settingsLoading } = useSettings()
 
   // ---- estado local ----
   const [period, setPeriod] = useState('daily')
@@ -70,6 +73,10 @@ export function DashboardTV() {
   const [passwordError, setPasswordError] = useState('')
   const navigate = useNavigate()
   const menuRef = useRef(null)
+
+  // ---- gamification state ----
+  const [overtakeAlerts, setOvertakeAlerts] = useState([])
+  const [breakingNews, setBreakingNews] = useState({ visible: false, sellerName: '', amount: 0 })
 
   // ---- dados protegidos contra null/undefined ----
   const sellers = useMemo(() => {
@@ -88,9 +95,133 @@ export function DashboardTV() {
     }
   }, [rawTeamGoal])
 
-  // ---- hooks derivados (só rodam depois que sellers existe) ----
+  // ---- hooks derivados ----
   const { currentView, isTransitioning, goToView } = useCarousel(VIEW_COUNT, 30000)
   useAudioAlert(sellers)
+
+  // ---- calculos derivados ----
+  const teamTotal = useMemo(() => {
+    return (sellers || []).reduce((total, seller) => {
+      return total + getPeriodSales(seller, period)
+    }, 0)
+  }, [sellers, period])
+
+  const teamGoalForPeriod = useMemo(() => {
+    switch (period) {
+      case 'daily': return Number(teamGoal?.daily) || 0
+      case 'monthly': return Number(teamGoal?.monthly) || 0
+      case 'annual': return Number(teamGoal?.annual) || 0
+      default: return Number(teamGoal?.daily) || 0
+    }
+  }, [teamGoal, period])
+
+  const teamPercentage = useMemo(() => {
+    return teamGoalForPeriod > 0
+      ? Math.min(safeDivide(teamTotal, teamGoalForPeriod) * 100, 100)
+      : 0
+  }, [teamTotal, teamGoalForPeriod])
+
+  const sortedSellers = useMemo(() => {
+    return (sellers || [])
+      .filter((s) => s?.name !== 'Representantes')
+      .sort((a, b) => getPeriodSales(b, period) - getPeriodSales(a, period))
+  }, [sellers, period])
+
+  // ---- sprint settings ----
+  const sprintActive = settings?.sprintActive && settings?.sprintEnd && settings.sprintEnd > Date.now()
+  const sprintPrize = settings?.sprintPrize || ''
+  const sprintEndTime = settings?.sprintEnd || null
+  const mainPrizeName = settings?.mainPrizeName || ''
+  const mainPrizeImage = settings?.mainPrizeImage || ''
+
+  // ---- overtake detection ----
+  const prevSortedSellersRef = useRef(null)
+  const hasInitialSnapshot = useRef(false)
+
+  useEffect(() => {
+    if (!sortedSellers || sortedSellers.length === 0) return
+
+    if (!hasInitialSnapshot.current) {
+      prevSortedSellersRef.current = sortedSellers
+      hasInitialSnapshot.current = true
+      return
+    }
+
+    const prevSorted = prevSortedSellersRef.current
+    if (!prevSorted || prevSorted.length === 0) return
+
+    const prevRankMap = {}
+    prevSorted.forEach((s, idx) => {
+      if (s?.id) prevRankMap[s.id] = idx
+    })
+
+    const newAlerts = []
+
+    sortedSellers.forEach((seller, newIdx) => {
+      if (!seller?.id) return
+      const prevIdx = prevRankMap[seller.id]
+      if (prevIdx !== undefined && prevIdx > newIdx) {
+        const overtakenSeller = prevSorted[prevIdx]
+        if (overtakenSeller?.name && seller?.name && overtakenSeller.id !== seller.id) {
+          newAlerts.push({
+            id: `overtake_${seller.id}_${Date.now()}_${Math.random()}`,
+            text: `🔥 ${seller.name} ligou o turbo e ultrapassou ${overtakenSeller.name}!`,
+            timestamp: Date.now(),
+          })
+        }
+      }
+    })
+
+    prevSortedSellersRef.current = sortedSellers
+
+    if (newAlerts.length > 0) {
+      setOvertakeAlerts((prev) => [...prev, ...newAlerts])
+    }
+  }, [sortedSellers])
+
+  // ---- breaking news detection ----
+  const prevSellersForBreakingRef = useRef(null)
+  const hasInitialSellersSnapshot = useRef(false)
+
+  useEffect(() => {
+    if (!sellers || sellers.length === 0) return
+
+    if (!hasInitialSellersSnapshot.current) {
+      prevSellersForBreakingRef.current = sellers
+      hasInitialSellersSnapshot.current = true
+      return
+    }
+
+    const prevSellers = prevSellersForBreakingRef.current
+    if (!prevSellers) return
+
+    for (const seller of sellers) {
+      if (!seller?.id || !seller?.name) continue
+      const prevSeller = prevSellers.find((p) => p?.id === seller.id)
+      if (!prevSeller) continue
+
+      const dailyIncrease = (Number(seller.dailySales) || 0) - (Number(prevSeller.dailySales) || 0)
+      if (dailyIncrease >= SUPER_SALE_THRESHOLD) {
+        setBreakingNews({
+          visible: true,
+          sellerName: seller.name,
+          amount: dailyIncrease,
+        })
+        break
+      }
+    }
+
+    prevSellersForBreakingRef.current = sellers
+  }, [sellers])
+
+  useEffect(() => {
+    if (breakingNews.visible) {
+      const timeout = setTimeout(() => {
+        setBreakingNews({ visible: false, sellerName: '', amount: 0 })
+      }, 8000)
+      return () => clearTimeout(timeout)
+    }
+  }, [breakingNews.visible])
 
   // ---- carrossel de background ----
   useEffect(() => {
@@ -136,28 +267,6 @@ export function DashboardTV() {
     setPasswordError('')
   }
 
-  // ---- calculos derivados (todos protegidos) ----
-  const teamTotal = useMemo(() => {
-    return (sellers || []).reduce((total, seller) => {
-      return total + getPeriodSales(seller, period)
-    }, 0)
-  }, [sellers, period])
-
-  const teamGoalForPeriod = useMemo(() => {
-    switch (period) {
-      case 'daily': return Number(teamGoal?.daily) || 0
-      case 'monthly': return Number(teamGoal?.monthly) || 0
-      case 'annual': return Number(teamGoal?.annual) || 0
-      default: return Number(teamGoal?.daily) || 0
-    }
-  }, [teamGoal, period])
-
-  const teamPercentage = useMemo(() => {
-    return teamGoalForPeriod > 0
-      ? Math.min(safeDivide(teamTotal, teamGoalForPeriod) * 100, 100)
-      : 0
-  }, [teamTotal, teamGoalForPeriod])
-
   const formatCurrency = (value) => {
     const num = Number(value) || 0
     return new Intl.NumberFormat('pt-BR', {
@@ -166,14 +275,8 @@ export function DashboardTV() {
     }).format(num)
   }
 
-  const sortedSellers = useMemo(() => {
-    return (sellers || [])
-      .filter((s) => s?.name !== 'Representantes')
-      .sort((a, b) => getPeriodSales(b, period) - getPeriodSales(a, period))
-  }, [sellers, period])
-
   // ============================================================
-  // ESTADO DE LOADING — early return antes de qualquer render
+  // ESTADO DE LOADING
   // ============================================================
   const isLoading = sellersLoading || goalLoading || settingsLoading
 
@@ -196,6 +299,13 @@ export function DashboardTV() {
     <div className="min-h-screen bg-slate-950">
       <ConfettiTrigger teamPercentage={teamPercentage} />
 
+      {/* ---- Sprint Banner ---- */}
+      <SprintBanner
+        active={sprintActive}
+        prize={sprintPrize}
+        endTime={sprintEndTime}
+      />
+
       {/* ---- Modal de senha ---- */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -205,7 +315,7 @@ export function DashboardTV() {
               Acesso Restrito
             </h3>
             <p className="text-slate-400 text-xs mb-4">Digite a senha para acessar o Painel do Gestor</p>
-            
+
             <form onSubmit={handlePasswordSubmit}>
               <input
                 type="password"
@@ -239,20 +349,19 @@ export function DashboardTV() {
       )}
 
       {/* ---- Header com background ---- */}
-      <header className="relative min-h-[12rem] sm:min-h-[14rem] md:min-h-[16rem] overflow-hidden">
-        <div 
+      <header className={`relative min-h-[12rem] sm:min-h-[14rem] md:min-h-[16rem] overflow-hidden ${sprintActive ? 'mt-14 sm:mt-12' : ''}`}>
+        <div
           className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
-          style={{ 
+          style={{
             backgroundImage: `url(${backgroundImages[bgIndex] || backgroundImages[0]})`,
             opacity: fade ? 1 : 0,
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-slate-950/70 to-slate-950" />
 
-        {/* Indicadores de background */}
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex gap-2">
           {backgroundImages.map((_, i) => (
-            <div 
+            <div
               key={i}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
                 i === bgIndex
@@ -270,7 +379,7 @@ export function DashboardTV() {
               <span className="truncate">Painel de Metas</span>
             </h1>
             <p className="text-slate-300 text-xs sm:text-sm mt-1 truncate">Innovate — Representantes Revenda</p>
-            
+
             <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3">
               {(periods || []).map((p) => (
                 <button
@@ -289,10 +398,10 @@ export function DashboardTV() {
               ))}
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:gap-3 ml-3">
             <Clock />
-            
+
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowMenu(!showMenu)}
@@ -323,13 +432,12 @@ export function DashboardTV() {
 
       {/* ---- Conteudo principal ---- */}
       <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 pb-24">
-        {/* Card Performance da Equipe */}
         <div className="mb-4 sm:mb-6 bg-slate-900/50 backdrop-blur-sm rounded-xl border border-slate-800 p-3 sm:p-4 md:p-5">
           <h2 className="text-base sm:text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
             <span>👥</span>
             Performance da Equipe
           </h2>
-          
+
           <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
             <div className="text-center">
               <p className="text-slate-400 text-[10px] sm:text-xs">Total de Vendas</p>
@@ -362,11 +470,10 @@ export function DashboardTV() {
             </div>
           </div>
 
-          {/* Barra de progresso da equipe */}
           <div className="w-full bg-slate-800 rounded-full overflow-hidden h-2 sm:h-3">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                teamPercentage >= 100 
+                teamPercentage >= 100
                   ? 'bg-gradient-to-r from-green-400 to-emerald-500 shadow-[0_0_15px_rgba(74,222,128,0.5)]'
                   : teamPercentage >= 80
                   ? 'bg-gradient-to-r from-[#2DD4BF] to-teal-500 shadow-[0_0_12px_rgba(45,212,191,0.4)]'
@@ -449,8 +556,28 @@ export function DashboardTV() {
               />
             </div>
           )}
+
+          {/* View 3: Premio */}
+          {currentView === 3 && (
+            <div className="animate-slide-up">
+              <PrizeSlide
+                prizeName={mainPrizeName}
+                prizeImage={mainPrizeImage}
+                teamTotal={teamTotal}
+                teamGoal={teamGoalForPeriod}
+              />
+            </div>
+          )}
         </div>
       </div>
+
+      {/* ---- Gamification Overlays ---- */}
+      <OvertakeAlert alerts={overtakeAlerts} />
+      <BreakingNewsOverlay
+        visible={breakingNews.visible}
+        sellerName={breakingNews.sellerName}
+        amount={breakingNews.amount}
+      />
 
       <MotivationalFooter />
     </div>
