@@ -25,10 +25,9 @@ const backgroundImages = [
 ]
 
 const ADMIN_PASSWORD = 'admin123'
-const VIEW_COUNT = 4
 const SUPER_SALE_THRESHOLD = 5000
 
-const viewLabels = ['Visao Geral', 'Podium', 'Motivacao', 'Premio']
+const viewLabelsAll = ['Visao Geral', 'Podium', 'Motivacao', 'Premio']
 
 // ---------- helpers seguros ----------
 
@@ -96,7 +95,12 @@ export function DashboardTV() {
   }, [rawTeamGoal])
 
   // ---- hooks derivados ----
-  const { currentView, isTransitioning, goToView } = useCarousel(VIEW_COUNT, 30000)
+  const showPrize = settings?.showPrize ?? false
+  const effectiveViewCount = showPrize ? 4 : 3
+  const { currentView: rawCurrentView, isTransitioning, goToView } = useCarousel(effectiveViewCount, 30000)
+  
+  // Safety: se currentView ficou fora dos limites (ex: showPrize mudou de true para false)
+  const currentView = rawCurrentView >= effectiveViewCount ? 0 : rawCurrentView
   useAudioAlert(sellers)
 
   // ---- calculos derivados ----
@@ -486,7 +490,7 @@ export function DashboardTV() {
 
         {/* Botoes de view */}
         <div className="mb-4 flex items-center justify-center gap-2">
-          {(viewLabels || []).map((label, i) => (
+          {(showPrize ? viewLabelsAll : viewLabelsAll.slice(0, 3)).map((label, i) => (
             <button
               key={i}
               onClick={() => goToView(i)}
@@ -557,8 +561,8 @@ export function DashboardTV() {
             </div>
           )}
 
-          {/* View 3: Premio */}
-          {currentView === 3 && (
+          {/* View 3: Premio (condicional) */}
+          {currentView === 3 && showPrize && (
             <div className="animate-slide-up">
               <PrizeSlide
                 prizeName={mainPrizeName}

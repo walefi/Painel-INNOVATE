@@ -114,6 +114,7 @@ export const initialTeamGoal = {
 export const initialSettings = {
   monthlyResetDay: 1,
   lastResetDate: null,
+  showPrize: false,
 }
 
 // Frases motivacionais para o rodapé

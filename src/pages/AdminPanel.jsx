@@ -213,6 +213,7 @@ export function AdminPanel() {
           sprintPrize: '',
           mainPrizeName: '',
           mainPrizeImage: '',
+          showPrize: false,
         })
         alert('Dados criados no Firestore!')
       } catch (err) {
@@ -757,6 +758,32 @@ export function AdminPanel() {
                   </div>
                 )}
               </div>
+
+              <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">📺</span>
+                  <span className="text-[10px] sm:text-xs text-slate-300">Exibir Premio na TV</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newValue = !(settings?.showPrize ?? false)
+                    updateSettings({ ...settings, showPrize: newValue })
+                  }}
+                  className={`
+                    relative w-10 h-5 sm:w-12 sm:h-6 rounded-full transition-colors duration-200
+                    ${settings?.showPrize ? 'bg-[#2DD4BF]' : 'bg-slate-600'}
+                  `}
+                >
+                  <span
+                    className={`
+                      absolute top-0.5 left-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full shadow-md transition-transform duration-200
+                      ${settings?.showPrize ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0'}
+                    `}
+                  />
+                </button>
+              </div>
+
               <button
                 onClick={handleSavePrize}
                 className="w-full px-4 py-2 bg-[#2DD4BF] text-slate-900 rounded-lg hover:bg-[#2DD4BF]/80 transition-colors text-xs sm:text-sm font-medium"
