@@ -1,18 +1,39 @@
-export function Ranking({ sellers, period }) {
+function getInitials(name) {
+  if (!name || typeof name !== 'string') return '??'
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase() || '??'
+}
+
+function safeNumber(val) {
+  return Number(val) || 0
+}
+
+export function Ranking({ sellers = [], period }) {
+  const safeSellers = Array.isArray(sellers) ? sellers : []
+
   const getPeriodSales = (seller) => {
+    if (!seller) return 0
     switch (period) {
-      case 'daily': return seller.dailySales
-      case 'monthly': return seller.monthlySales
-      case 'annual': return seller.annualSales
-      default: return seller.dailySales
+      case 'daily': return safeNumber(seller.dailySales)
+      case 'monthly': return safeNumber(seller.monthlySales)
+      case 'annual': return safeNumber(seller.annualSales)
+      default: return safeNumber(seller.dailySales)
     }
   }
 
-  const sortedSellers = [...sellers].sort((a, b) => {
+  const sortedSellers = [...safeSellers].sort((a, b) => {
     return getPeriodSales(b) - getPeriodSales(a)
   })
 
   const getMotivationalPhrase = (index, total) => {
+    if (total === 0) {
+      return { text: 'Aguardando dados...', icon: '⏳', color: 'text-slate-400', bg: 'bg-slate-800/50 border-slate-700/50' }
+    }
     const position = index + 1
     const percentage = ((total - position) / total) * 100
 
@@ -35,7 +56,7 @@ export function Ranking({ sellers, period }) {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    }).format(value)
+    }).format(safeNumber(value))
   }
 
   return (
@@ -47,16 +68,17 @@ export function Ranking({ sellers, period }) {
 
       <div className="space-y-2">
         {sortedSellers.map((seller, index) => {
+          if (!seller) return null
           const phrase = getMotivationalPhrase(index, sortedSellers.length)
           const sales = getPeriodSales(seller)
           const isFirst = index === 0
-          const hasPhoto = seller.avatarUrl && seller.avatarUrl.trim() !== ''
-          const hasDataAvatar = seller.avatar && seller.avatar.startsWith('data:')
-          const initials = seller.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+          const hasPhoto = seller.avatarUrl && typeof seller.avatarUrl === 'string' && seller.avatarUrl.trim() !== ''
+          const hasDataAvatar = seller.avatar && typeof seller.avatar === 'string' && seller.avatar.startsWith('data:')
+          const initials = getInitials(seller.name)
           
           return (
             <div
-              key={seller.id}
+              key={seller.id || index}
               className={`
                 flex items-center gap-3 p-3 rounded-lg border transition-all duration-300
                 ${phrase.bg}
@@ -76,15 +98,15 @@ export function Ranking({ sellers, period }) {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   {hasPhoto ? (
-                    <img src={seller.avatarUrl} alt={seller.name} className="w-6 h-6 rounded-full object-cover" />
+                    <img src={seller.avatarUrl} alt={seller.name || 'Vendedor'} className="w-6 h-6 rounded-full object-cover" />
                   ) : hasDataAvatar ? (
-                    <img src={seller.avatar} alt={seller.name} className="w-6 h-6 rounded-full object-cover" />
+                    <img src={seller.avatar} alt={seller.name || 'Vendedor'} className="w-6 h-6 rounded-full object-cover" />
                   ) : (
                     <div className="w-6 h-6 rounded-full bg-slate-700/60 flex items-center justify-center text-[10px] font-bold text-slate-300">
                       {initials}
                     </div>
                   )}
-                  <span className="text-white font-medium text-sm">{seller.name}</span>
+                  <span className="text-white font-medium text-sm">{seller.name || 'Sem nome'}</span>
                 </div>
                 <p className={`text-xs ${phrase.color}`}>{phrase.text}</p>
               </div>
@@ -96,6 +118,10 @@ export function Ranking({ sellers, period }) {
             </div>
           )
         })}
+
+        {sortedSellers.length === 0 && (
+          <p className="text-slate-500 text-sm text-center py-4">Nenhum vendedor encontrado</p>
+        )}
       </div>
     </div>
   )

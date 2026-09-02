@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   collection,
   doc,
@@ -46,6 +46,7 @@ function syncFromFirestore(data, lsKey, setFn) {
 export function useSellers() {
   const [sellers, setSellers] = useState(() => loadLS(LS_SELLERS, []))
   const [loading, setLoading] = useState(true)
+  const loadingRef = useRef(true)
 
   useEffect(() => {
     let unsub = null
@@ -56,6 +57,7 @@ export function useSellers() {
       (snapshot) => {
         const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
         syncFromFirestore(data, LS_SELLERS, setSellers)
+        loadingRef.current = false
         setLoading(false)
       },
       (err) => {
@@ -66,14 +68,17 @@ export function useSellers() {
         } else {
           setSellers(initialSellers.map((s, i) => ({ ...s, id: `local_${i + 1}` })))
         }
+        loadingRef.current = false
         setLoading(false)
       }
     )
 
+    // Fallback: se o Firestore nao responder em 5s, usa dados locais/iniciais
     timeout = setTimeout(() => {
-      if (loading) {
+      if (loadingRef.current) {
         const ls = loadLS(LS_SELLERS, [])
         setSellers(ls.length > 0 ? ls : initialSellers.map((s, i) => ({ ...s, id: `local_${i + 1}` })))
+        loadingRef.current = false
         setLoading(false)
       }
     }, 5000)
@@ -140,6 +145,7 @@ export function useSellers() {
 export function useSettings() {
   const [settings, setSettings] = useState(() => loadLS(LS_SETTINGS, initialSettings))
   const [loading, setLoading] = useState(true)
+  const loadingRef = useRef(true)
 
   useEffect(() => {
     let unsub = null
@@ -153,16 +159,21 @@ export function useSettings() {
           setSettings(data)
           saveLS(LS_SETTINGS, data)
         }
+        loadingRef.current = false
         setLoading(false)
       },
       (err) => {
         console.error('Firestore settings error:', err.message)
+        loadingRef.current = false
         setLoading(false)
       }
     )
 
     timeout = setTimeout(() => {
-      if (loading) setLoading(false)
+      if (loadingRef.current) {
+        loadingRef.current = false
+        setLoading(false)
+      }
     }, 5000)
 
     return () => {
@@ -183,6 +194,7 @@ export function useSettings() {
 export function useTeamGoal() {
   const [teamGoal, setTeamGoal] = useState(() => loadLS(LS_GOAL, initialTeamGoal))
   const [loading, setLoading] = useState(true)
+  const loadingRef = useRef(true)
 
   useEffect(() => {
     let unsub = null
@@ -196,16 +208,21 @@ export function useTeamGoal() {
           setTeamGoal(data)
           saveLS(LS_GOAL, data)
         }
+        loadingRef.current = false
         setLoading(false)
       },
       (err) => {
         console.error('Firestore teamGoal error:', err.message)
+        loadingRef.current = false
         setLoading(false)
       }
     )
 
     timeout = setTimeout(() => {
-      if (loading) setLoading(false)
+      if (loadingRef.current) {
+        loadingRef.current = false
+        setLoading(false)
+      }
     }, 5000)
 
     return () => {

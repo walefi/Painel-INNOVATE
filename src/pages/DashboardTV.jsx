@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Ranking } from '../components/Ranking'
 import { Clock } from '../components/Clock'
@@ -24,10 +24,43 @@ const VIEW_COUNT = 3
 
 const viewLabels = ['Visao Geral', 'Podium', 'Motivacao']
 
+// ---------- helpers seguros ----------
+
+/** Protege divisao por zero */
+function safeDivide(numerator, denominator, fallback = 0) {
+  if (!denominator || denominator === 0) return fallback
+  return numerator / denominator
+}
+
+/** Retorna vendas de um seller para o periodo, com fallback */
+function getPeriodSales(seller, period) {
+  if (!seller) return 0
+  switch (period) {
+    case 'daily': return Number(seller?.dailySales) || 0
+    case 'monthly': return Number(seller?.monthlySales) || 0
+    case 'annual': return Number(seller?.annualSales) || 0
+    default: return Number(seller?.dailySales) || 0
+  }
+}
+
+/** Retorna meta de um seller para o periodo, com fallback */
+function getPeriodGoal(seller, period) {
+  if (!seller) return 0
+  switch (period) {
+    case 'daily': return Number(seller?.dailyGoal) || 0
+    case 'monthly': return Number(seller?.monthlyGoal) || 0
+    case 'annual': return Number(seller?.annualGoal) || 0
+    default: return Number(seller?.dailyGoal) || 0
+  }
+}
+
 export function DashboardTV() {
-  const { sellers, loading: sellersLoading } = useSellers()
-  const { teamGoal, loading: goalLoading } = useTeamGoal()
+  // ---- hooks do Firestore ----
+  const { sellers: rawSellers, loading: sellersLoading } = useSellers()
+  const { teamGoal: rawTeamGoal, loading: goalLoading } = useTeamGoal()
   const { loading: settingsLoading } = useSettings()
+
+  // ---- estado local ----
   const [period, setPeriod] = useState('daily')
   const [bgIndex, setBgIndex] = useState(0)
   const [fade, setFade] = useState(true)
@@ -38,9 +71,28 @@ export function DashboardTV() {
   const navigate = useNavigate()
   const menuRef = useRef(null)
 
+  // ---- dados protegidos contra null/undefined ----
+  const sellers = useMemo(() => {
+    if (!Array.isArray(rawSellers)) return []
+    return rawSellers
+  }, [rawSellers])
+
+  const teamGoal = useMemo(() => {
+    if (!rawTeamGoal || typeof rawTeamGoal !== 'object') {
+      return { daily: 0, monthly: 0, annual: 0 }
+    }
+    return {
+      daily: Number(rawTeamGoal?.daily) || 0,
+      monthly: Number(rawTeamGoal?.monthly) || 0,
+      annual: Number(rawTeamGoal?.annual) || 0,
+    }
+  }, [rawTeamGoal])
+
+  // ---- hooks derivados (só rodam depois que sellers existe) ----
   const { currentView, isTransitioning, goToView } = useCarousel(VIEW_COUNT, 30000)
   useAudioAlert(sellers)
 
+  // ---- carrossel de background ----
   useEffect(() => {
     const interval = setInterval(() => {
       setFade(false)
@@ -52,6 +104,7 @@ export function DashboardTV() {
     return () => clearInterval(interval)
   }, [])
 
+  // ---- fechar menu ao clicar fora ----
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -64,6 +117,7 @@ export function DashboardTV() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showMenu])
 
+  // ---- handlers ----
   const handlePasswordSubmit = (e) => {
     e.preventDefault()
     if (password === ADMIN_PASSWORD) {
@@ -82,71 +136,67 @@ export function DashboardTV() {
     setPasswordError('')
   }
 
-  const getTeamTotal = () => {
-    return sellers.reduce((total, seller) => {
-      switch (period) {
-        case 'daily': return total + (seller.dailySales || 0)
-        case 'monthly': return total + (seller.monthlySales || 0)
-        case 'annual': return total + (seller.annualSales || 0)
-        default: return total + (seller.dailySales || 0)
-      }
+  // ---- calculos derivados (todos protegidos) ----
+  const teamTotal = useMemo(() => {
+    return (sellers || []).reduce((total, seller) => {
+      return total + getPeriodSales(seller, period)
     }, 0)
-  }
+  }, [sellers, period])
 
-  const getTeamGoalForPeriod = () => {
+  const teamGoalForPeriod = useMemo(() => {
     switch (period) {
-      case 'daily': return teamGoal.daily || 0
-      case 'monthly': return teamGoal.monthly || 0
-      case 'annual': return teamGoal.annual || 0
-      default: return teamGoal.daily || 0
+      case 'daily': return Number(teamGoal?.daily) || 0
+      case 'monthly': return Number(teamGoal?.monthly) || 0
+      case 'annual': return Number(teamGoal?.annual) || 0
+      default: return Number(teamGoal?.daily) || 0
     }
-  }
+  }, [teamGoal, period])
 
-  const teamTotal = getTeamTotal()
-  const teamGoalForPeriod = getTeamGoalForPeriod()
-  const teamPercentage = teamGoalForPeriod > 0
-    ? Math.min((teamTotal / teamGoalForPeriod) * 100, 100)
-    : 0
+  const teamPercentage = useMemo(() => {
+    return teamGoalForPeriod > 0
+      ? Math.min(safeDivide(teamTotal, teamGoalForPeriod) * 100, 100)
+      : 0
+  }, [teamTotal, teamGoalForPeriod])
 
   const formatCurrency = (value) => {
+    const num = Number(value) || 0
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    }).format(value)
+    }).format(num)
   }
 
-  const sortedSellers = [...sellers]
-    .filter(s => s.name !== 'Representantes')
-    .sort((a, b) => {
-      const getSales = (s) => {
-        switch (period) {
-          case 'daily': return s.dailySales || 0
-          case 'monthly': return s.monthlySales || 0
-          case 'annual': return s.annualSales || 0
-          default: return s.dailySales || 0
-        }
-      }
-      return getSales(b) - getSales(a)
-    })
+  const sortedSellers = useMemo(() => {
+    return (sellers || [])
+      .filter((s) => s?.name !== 'Representantes')
+      .sort((a, b) => getPeriodSales(b, period) - getPeriodSales(a, period))
+  }, [sellers, period])
 
+  // ============================================================
+  // ESTADO DE LOADING — early return antes de qualquer render
+  // ============================================================
   const isLoading = sellersLoading || goalLoading || settingsLoading
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-[#0F1B2E] text-white text-2xl font-space">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-[#2DD4BF] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[#2DD4BF] font-medium">Conectando ao Firestore...</p>
+          <p className="text-[#2DD4BF] font-medium">Carregando painel de metas...</p>
           <p className="text-slate-500 text-sm mt-1">Sincronizando dados em tempo real</p>
         </div>
       </div>
     )
   }
 
+  // ============================================================
+  // RENDER PRINCIPAL
+  // ============================================================
   return (
     <div className="min-h-screen bg-slate-950">
       <ConfettiTrigger teamPercentage={teamPercentage} />
 
+      {/* ---- Modal de senha ---- */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-900 rounded-xl border border-slate-700 p-5 sm:p-6 w-full max-w-sm shadow-2xl">
@@ -163,7 +213,7 @@ export function DashboardTV() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Digite a senha"
                 autoFocus
-                className="w-full px-4 py-2.5 bg-slate-800 rounded-lg border border-slate-600               focus:border-[#2DD4BF] focus:outline-none text-sm mb-3"
+                className="w-full px-4 py-2.5 bg-slate-800 rounded-lg border border-slate-600 focus:border-[#2DD4BF] focus:outline-none text-sm mb-3"
               />
               {passwordError && (
                 <p className="text-red-400 text-xs mb-3 text-center animate-pulse">{passwordError}</p>
@@ -188,16 +238,18 @@ export function DashboardTV() {
         </div>
       )}
 
+      {/* ---- Header com background ---- */}
       <header className="relative min-h-[12rem] sm:min-h-[14rem] md:min-h-[16rem] overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
           style={{ 
-            backgroundImage: `url(${backgroundImages[bgIndex]})`,
+            backgroundImage: `url(${backgroundImages[bgIndex] || backgroundImages[0]})`,
             opacity: fade ? 1 : 0,
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-slate-950/70 to-slate-950" />
 
+        {/* Indicadores de background */}
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex gap-2">
           {backgroundImages.map((_, i) => (
             <div 
@@ -220,19 +272,19 @@ export function DashboardTV() {
             <p className="text-slate-300 text-xs sm:text-sm mt-1 truncate">Innovate — Representantes Revenda</p>
             
             <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3">
-              {periods.map((p) => (
+              {(periods || []).map((p) => (
                 <button
-                  key={p.id}
-                  onClick={() => setPeriod(p.id)}
+                  key={p?.id || Math.random()}
+                  onClick={() => setPeriod(p?.id || 'daily')}
                   className={`
                     px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200
-                    ${period === p.id
+                    ${period === p?.id
                       ? 'bg-[#2DD4BF] text-slate-900 shadow-[0_0_12px_rgba(45,212,191,0.4)]'
                       : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700/70 border border-slate-600/50'
                     }
                   `}
                 >
-                  {p.label}
+                  {p?.label || ''}
                 </button>
               ))}
             </div>
@@ -269,7 +321,9 @@ export function DashboardTV() {
         </div>
       </header>
 
+      {/* ---- Conteudo principal ---- */}
       <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 pb-24">
+        {/* Card Performance da Equipe */}
         <div className="mb-4 sm:mb-6 bg-slate-900/50 backdrop-blur-sm rounded-xl border border-slate-800 p-3 sm:p-4 md:p-5">
           <h2 className="text-base sm:text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
             <span>👥</span>
@@ -308,6 +362,7 @@ export function DashboardTV() {
             </div>
           </div>
 
+          {/* Barra de progresso da equipe */}
           <div className="w-full bg-slate-800 rounded-full overflow-hidden h-2 sm:h-3">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
@@ -317,13 +372,14 @@ export function DashboardTV() {
                   ? 'bg-gradient-to-r from-[#2DD4BF] to-teal-500 shadow-[0_0_12px_rgba(45,212,191,0.4)]'
                   : 'bg-gradient-to-r from-blue-500 to-[#2DD4BF]'
               }`}
-              style={{ width: `${teamPercentage}%` }}
+              style={{ width: `${Math.max(0, Math.min(teamPercentage, 100))}%` }}
             />
           </div>
         </div>
 
+        {/* Botoes de view */}
         <div className="mb-4 flex items-center justify-center gap-2">
-          {viewLabels.map((label, i) => (
+          {(viewLabels || []).map((label, i) => (
             <button
               key={i}
               onClick={() => goToView(i)}
@@ -340,23 +396,25 @@ export function DashboardTV() {
           ))}
         </div>
 
+        {/* Area de views com transicao */}
         <div className={`
           transition-all duration-500 ease-in-out
           ${isTransitioning ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'}
         `}>
+          {/* View 0: Visao Geral */}
           {currentView === 0 && (
             <div className="animate-slide-up">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
                 <div className="lg:col-span-2">
-          <h2 className="text-base sm:text-lg font-bold text-[#2DD4BF] mb-3 flex items-center gap-2 font-space">
+                  <h2 className="text-base sm:text-lg font-bold text-[#2DD4BF] mb-3 flex items-center gap-2 font-space">
                     <span>🏆</span>
                     Vendedores
                   </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                    {sortedSellers.map((seller, index) => (
+                    {(sortedSellers || []).map((seller, index) => (
                       <SellerCardTV
-                        key={seller.id}
-                        seller={seller}
+                        key={seller?.id || index}
+                        seller={seller || {}}
                         period={period}
                         rank={index + 1}
                       />
@@ -374,12 +432,14 @@ export function DashboardTV() {
             </div>
           )}
 
+          {/* View 1: Podium */}
           {currentView === 1 && (
             <div className="animate-slide-up">
               <PodiumView sellers={sellers} period={period} />
             </div>
           )}
 
+          {/* View 2: Motivacao */}
           {currentView === 2 && (
             <div className="animate-slide-up">
               <MotivationView

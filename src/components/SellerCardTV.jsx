@@ -1,17 +1,34 @@
 import { AnimatedNumber } from './AnimatedNumber'
 import { Trophy, Flame } from 'lucide-react'
 
-export function SellerCardTV({ seller, period, rank }) {
+function getInitials(name) {
+  if (!name || typeof name !== 'string') return '??'
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase() || '??'
+}
+
+function safeNumber(val) {
+  return Number(val) || 0
+}
+
+export function SellerCardTV({ seller = {}, period, rank }) {
+  const s = seller || {}
+
   const getPeriodData = () => {
     switch (period) {
       case 'daily':
-        return { current: seller.dailySales, goal: seller.dailyGoal, label: 'Meta Diaria' }
+        return { current: safeNumber(s.dailySales), goal: safeNumber(s.dailyGoal), label: 'Meta Diaria' }
       case 'monthly':
-        return { current: seller.monthlySales, goal: seller.monthlyGoal, label: 'Meta Mensal' }
+        return { current: safeNumber(s.monthlySales), goal: safeNumber(s.monthlyGoal), label: 'Meta Mensal' }
       case 'annual':
-        return { current: seller.annualSales, goal: seller.annualGoal, label: 'Meta Anual' }
+        return { current: safeNumber(s.annualSales), goal: safeNumber(s.annualGoal), label: 'Meta Anual' }
       default:
-        return { current: seller.dailySales, goal: seller.dailyGoal, label: 'Meta Diaria' }
+        return { current: safeNumber(s.dailySales), goal: safeNumber(s.dailyGoal), label: 'Meta Diaria' }
     }
   }
 
@@ -24,14 +41,9 @@ export function SellerCardTV({ seller, period, rank }) {
   const hasStreak = percentage >= 80 && percentage < 100
   const hasTrophy = percentage >= 100
 
-  const hasPhoto = seller.avatarUrl && seller.avatarUrl.trim() !== ''
-  const hasDataAvatar = seller.avatar && seller.avatar.startsWith('data:')
-  const initials = seller.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .substring(0, 2)
-    .toUpperCase()
+  const hasPhoto = s.avatarUrl && typeof s.avatarUrl === 'string' && s.avatarUrl.trim() !== ''
+  const hasDataAvatar = s.avatar && typeof s.avatar === 'string' && s.avatar.startsWith('data:')
+  const initials = getInitials(s.name)
 
   return (
     <div
@@ -59,14 +71,14 @@ export function SellerCardTV({ seller, period, rank }) {
         <div className="relative flex-shrink-0">
           {hasPhoto ? (
             <img
-              src={seller.avatarUrl}
-              alt={seller.name}
+              src={s.avatarUrl}
+              alt={s.name || 'Vendedor'}
               className="w-12 h-12 rounded-full object-cover border-2 border-slate-600"
             />
           ) : hasDataAvatar ? (
             <img
-              src={seller.avatar}
-              alt={seller.name}
+              src={s.avatar}
+              alt={s.name || 'Vendedor'}
               className="w-12 h-12 rounded-full object-cover border-2 border-slate-600"
             />
           ) : (
@@ -94,7 +106,7 @@ export function SellerCardTV({ seller, period, rank }) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-semibold text-sm truncate">{seller.name}</h3>
+          <h3 className="text-white font-semibold text-sm truncate">{s.name || 'Sem nome'}</h3>
           <p className="text-slate-400 text-xs">{periodData.label}</p>
         </div>
 
@@ -121,7 +133,7 @@ export function SellerCardTV({ seller, period, rank }) {
                 ? 'bg-gradient-to-r from-[#E8A33D] to-amber-400'
                 : 'bg-gradient-to-r from-blue-600 to-cyan-500'
             }`}
-            style={{ width: `${percentage}%` }}
+            style={{ width: `${Math.max(0, Math.min(percentage, 100))}%` }}
           />
         </div>
       </div>
@@ -134,9 +146,9 @@ export function SellerCardTV({ seller, period, rank }) {
         </span>
       </div>
 
-      {seller.badges && seller.badges.length > 0 && (
+      {Array.isArray(s.badges) && s.badges.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-slate-700/30">
-          {seller.badges.map((badge, i) => (
+          {s.badges.map((badge, i) => (
             <span
               key={i}
               className="px-2 py-0.5 text-[10px] rounded-full bg-[#E8A33D]/10 text-[#E8A33D] border border-[#E8A33D]/30 font-medium"
@@ -147,9 +159,9 @@ export function SellerCardTV({ seller, period, rank }) {
         </div>
       )}
 
-      {seller.manualTags && seller.manualTags.length > 0 && (
+      {Array.isArray(s.manualTags) && s.manualTags.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1">
-          {seller.manualTags.map((tag, i) => (
+          {s.manualTags.map((tag, i) => (
             <span
               key={i}
               className="px-2 py-0.5 text-[10px] rounded-full bg-[#2DD4BF]/10 text-[#2DD4BF] border border-[#2DD4BF]/30 font-medium"

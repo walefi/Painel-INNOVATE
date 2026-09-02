@@ -1,27 +1,46 @@
 import { AnimatedNumber } from './AnimatedNumber'
 import { Trophy, Medal } from 'lucide-react'
 
-export function PodiumView({ sellers, period }) {
+function getInitials(name) {
+  if (!name || typeof name !== 'string') return '??'
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase() || '??'
+}
+
+function safeNumber(val) {
+  return Number(val) || 0
+}
+
+export function PodiumView({ sellers = [], period }) {
+  const safeSellers = Array.isArray(sellers) ? sellers : []
+
   const getPeriodSales = (seller) => {
+    if (!seller) return 0
     switch (period) {
-      case 'daily': return seller.dailySales
-      case 'monthly': return seller.monthlySales
-      case 'annual': return seller.annualSales
-      default: return seller.dailySales
+      case 'daily': return safeNumber(seller.dailySales)
+      case 'monthly': return safeNumber(seller.monthlySales)
+      case 'annual': return safeNumber(seller.annualSales)
+      default: return safeNumber(seller.dailySales)
     }
   }
 
   const getPeriodGoal = (seller) => {
+    if (!seller) return 0
     switch (period) {
-      case 'daily': return seller.dailyGoal
-      case 'monthly': return seller.monthlyGoal
-      case 'annual': return seller.annualGoal
-      default: return seller.dailyGoal
+      case 'daily': return safeNumber(seller.dailyGoal)
+      case 'monthly': return safeNumber(seller.monthlyGoal)
+      case 'annual': return safeNumber(seller.annualGoal)
+      default: return safeNumber(seller.dailyGoal)
     }
   }
 
-  const sorted = [...sellers]
-    .filter(s => s.name !== 'Representantes')
+  const sorted = safeSellers
+    .filter(s => s && s.name !== 'Representantes')
     .sort((a, b) => getPeriodSales(b) - getPeriodSales(a))
     .slice(0, 3)
 
@@ -49,18 +68,19 @@ export function PodiumView({ sellers, period }) {
 
       <div className="flex items-end justify-center gap-4 md:gap-8 max-w-3xl w-full">
         {podiumOrder.map((seller, displayIndex) => {
+          if (!seller) return null
           const actualRank = displayIndex === 1 ? 1 : displayIndex === 0 ? 2 : 3
           const sales = getPeriodSales(seller)
           const goal = getPeriodGoal(seller)
           const pct = goal > 0 ? Math.min((sales / goal) * 100, 100) : 0
 
-          const hasPhoto = seller.avatarUrl && seller.avatarUrl.trim() !== ''
-          const hasDataAvatar = seller.avatar && seller.avatar.startsWith('data:')
-          const initials = seller.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+          const hasPhoto = seller.avatarUrl && typeof seller.avatarUrl === 'string' && seller.avatarUrl.trim() !== ''
+          const hasDataAvatar = seller.avatar && typeof seller.avatar === 'string' && seller.avatar.startsWith('data:')
+          const initials = getInitials(seller.name)
 
           return (
             <div
-              key={seller.id}
+              key={seller.id || displayIndex}
               className="flex flex-col items-center animate-slide-up"
               style={{ animationDelay: `${displayIndex * 200}ms` }}
             >
@@ -69,7 +89,7 @@ export function PodiumView({ sellers, period }) {
                   {hasPhoto ? (
                     <img
                       src={seller.avatarUrl}
-                      alt={seller.name}
+                      alt={seller.name || 'Vendedor'}
                       className={`w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-3 ${
                         actualRank === 1                         ? 'border-[#E8A33D] shadow-[0_0_20px_rgba(232,163,61,0.5)]' : 'border-slate-600'
                       }`}
@@ -77,7 +97,7 @@ export function PodiumView({ sellers, period }) {
                   ) : hasDataAvatar ? (
                     <img
                       src={seller.avatar}
-                      alt={seller.name}
+                      alt={seller.name || 'Vendedor'}
                       className={`w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-3 ${
                         actualRank === 1                         ? 'border-[#E8A33D]' : 'border-slate-600'
                       }`}
@@ -99,7 +119,7 @@ export function PodiumView({ sellers, period }) {
                     </span>
                   )}
                 </div>
-                <p className="text-white font-bold text-sm md:text-base truncate max-w-[120px]">{seller.name}</p>
+                <p className="text-white font-bold text-sm md:text-base truncate max-w-[120px]">{seller.name || 'Sem nome'}</p>
                 <p className="text-[#2DD4BF] font-bold font-space text-lg md:text-xl mt-1">
                   <AnimatedNumber value={pct} format="percent" duration={2000} />
                 </p>
