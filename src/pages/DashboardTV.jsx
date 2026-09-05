@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Ranking } from '../components/Ranking'
 import { Clock } from '../components/Clock'
@@ -16,7 +16,7 @@ import { PrizeSlide } from '../components/PrizeSlide'
 import { useSellers, useTeamGoal, useSettings } from '../hooks/useFirestore'
 import { useCarousel } from '../hooks/useCarousel'
 import { useAudioAlert } from '../hooks/useAudioAlert'
-import { usePrevious } from '../hooks/usePrevious'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { periods } from '../data/initialData'
 
 const backgroundImages = [
@@ -102,6 +102,44 @@ export function DashboardTV() {
   // Safety: se currentView ficou fora dos limites (ex: showPrize mudou de true para false)
   const currentView = rawCurrentView >= effectiveViewCount ? 0 : rawCurrentView
   useAudioAlert(sellers)
+
+  const handleKeyboardShortcut = useCallback((action) => {
+    switch (action) {
+      case 'setPeriodDaily':
+        setPeriod('daily')
+        break
+      case 'setPeriodMonthly':
+        setPeriod('monthly')
+        break
+      case 'setPeriodAnnual':
+        setPeriod('annual')
+        break
+      case 'closeModal':
+        setShowPasswordModal(false)
+        setShowMenu(false)
+        break
+      case 'showHelp':
+        alert(
+          'Atalhos de Teclado:\n\n' +
+          'D - Periodo Diario\n' +
+          'M - Periodo Mensal\n' +
+          'A - Periodo Anual\n' +
+          'ESC - Fechar modal/menu\n' +
+          '? - Mostrar esta ajuda'
+        )
+        break
+      default:
+        break
+    }
+  }, [])
+
+  useKeyboardShortcuts({
+    'd': () => handleKeyboardShortcut('setPeriodDaily'),
+    'm': () => handleKeyboardShortcut('setPeriodMonthly'),
+    'a': () => handleKeyboardShortcut('setPeriodAnnual'),
+    'escape': () => handleKeyboardShortcut('closeModal'),
+    '?': () => handleKeyboardShortcut('showHelp'),
+  })
 
   // ---- calculos derivados ----
   const teamTotal = useMemo(() => {
@@ -587,3 +625,5 @@ export function DashboardTV() {
     </div>
   )
 }
+
+export default DashboardTV

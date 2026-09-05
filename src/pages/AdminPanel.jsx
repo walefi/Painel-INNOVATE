@@ -1,12 +1,20 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { useSellers, useSettings, useTeamGoal } from '../hooks/useFirestore'
+import { useSellers, useSettings, useTeamGoal, useSalesHistory } from '../hooks/useFirestore'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
+import { useTheme } from '../contexts/ThemeContext'
 import { periods } from '../data/initialData'
+import { SalesFilter } from '../components/SalesFilter'
+import { SalesTrendChart } from '../components/SalesTrendChart'
+import { ExportReport } from '../components/ExportReport'
+import { ComparativeDashboard } from '../components/ComparativeDashboard'
 
 export function AdminPanel() {
-  const { sellers, loading, addSeller, updateSeller, deleteSeller, bulkUpdateSellers, initializeSellers } = useSellers()
+  const { sellers, loading, addSeller, updateSeller, deleteSeller, bulkUpdateSellers, initializeSellers, resetAllSales } = useSellers()
   const { settings, updateSettings } = useSettings()
   const { teamGoal, updateTeamGoal } = useTeamGoal()
+  const { addSaleRecord, salesHistory } = useSalesHistory()
+  const { toggleTheme, isDark } = useTheme()
   const [period, setPeriod] = useState('daily')
 
   const [formData, setFormData] = useState({
@@ -50,6 +58,54 @@ export function AdminPanel() {
       manualTags: [],
     })
   }
+
+  const handleKeyboardShortcut = useCallback((action) => {
+    switch (action) {
+      case 'setPeriodDaily':
+        setPeriod('daily')
+        break
+      case 'setPeriodMonthly':
+        setPeriod('monthly')
+        break
+      case 'setPeriodAnnual':
+        setPeriod('annual')
+        break
+      case 'newSeller':
+        resetForm()
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        break
+      case 'toggleTheme':
+        toggleTheme()
+        break
+      case 'closeForm':
+        resetForm()
+        break
+      case 'showHelp':
+        alert(
+          'Atalhos de Teclado:\n\n' +
+          'D - Periodo Diario\n' +
+          'M - Periodo Mensal\n' +
+          'A - Periodo Anual\n' +
+          'N - Novo Vendedor\n' +
+          'T - Alternar Tema\n' +
+          'ESC - Limpar formulario\n' +
+          '? - Mostrar esta ajuda'
+        )
+        break
+      default:
+        break
+    }
+  }, [toggleTheme])
+
+  useKeyboardShortcuts({
+    'd': () => handleKeyboardShortcut('setPeriodDaily'),
+    'm': () => handleKeyboardShortcut('setPeriodMonthly'),
+    'a': () => handleKeyboardShortcut('setPeriodAnnual'),
+    'n': () => handleKeyboardShortcut('newSeller'),
+    't': () => handleKeyboardShortcut('toggleTheme'),
+    'escape': () => handleKeyboardShortcut('closeForm'),
+    '?': () => handleKeyboardShortcut('showHelp'),
+  })
 
   const applyBulkGoals = async () => {
     const updates = sellers.map((seller) => ({
@@ -168,6 +224,13 @@ export function AdminPanel() {
         monthlySales: (seller.monthlySales || 0) + value,
         annualSales: (seller.annualSales || 0) + value,
       })
+      await addSaleRecord({
+        sellerId: sellerId,
+        sellerName: seller.name,
+        value: value,
+        type: 'add',
+        period: period,
+      })
       setLastAdded({ id: sellerId, value })
       setSaleInputs({ ...saleInputs, [sellerId]: '' })
       setTimeout(() => setLastAdded(null), 2000)
@@ -190,6 +253,13 @@ export function AdminPanel() {
         dailySales: Math.max(0, (seller.dailySales || 0) - value),
         monthlySales: Math.max(0, (seller.monthlySales || 0) - value),
         annualSales: Math.max(0, (seller.annualSales || 0) - value),
+      })
+      await addSaleRecord({
+        sellerId: sellerId,
+        sellerName: seller.name,
+        value: value,
+        type: 'remove',
+        period: period,
       })
       setLastRemoved({ id: sellerId, value })
       setSaleInputs({ ...saleInputs, [sellerId]: '' })
@@ -272,6 +342,25 @@ export function AdminPanel() {
     }
   }
 
+  const handleResetAllSales = async () => {
+    const confirmed = window.confirm(
+      'ATENCAO: Isso vai ZERAR TODAS as vendas de TODOS os vendedores (diario, mensal e anual).\n\n' +
+      'Esta acao e IRREVERSIVEL. Deseja continuar?'
+    )
+    if (!confirmed) return
+
+    const doubleCheck = window.confirm('Tem ABSOLUTA certeza? Todos os dados de vendas serao apagados.')
+    if (!doubleCheck) return
+
+    try {
+      await resetAllSales('all')
+      alert('Todas as vendas foram zeradas com sucesso!')
+    } catch (err) {
+      console.error('Erro ao resetar vendas:', err)
+      alert('Erro ao resetar vendas: ' + err.message)
+    }
+  }
+
   const quickValues = [100, 250, 500, 1000, 2500, 5000]
 
   const formatCurrency = (value) => {
@@ -303,18 +392,25 @@ export function AdminPanel() {
             </h1>
             <p className="text-slate-400 text-[10px] sm:text-xs truncate">Innovate — Representantes Revenda</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {sellers.length === 0 && (
               <button
                 onClick={handleInitializeData}
-                className="px-3 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/30 transition-colors text-xs font-medium border border-yellow-500/30"
+                className="px-5 py-2.5 bg-yellow-500/20 text-yellow-400 rounded-xl hover:bg-yellow-500/30 transition-all text-sm font-semibold border border-yellow-500/30"
               >
                 Iniciar Dados
               </button>
             )}
+            <button
+              onClick={toggleTheme}
+              className="w-11 h-11 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-all flex items-center justify-center text-lg border border-slate-700 hover:border-slate-600"
+              title="Alternar tema (T)"
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
             <Link
               to="/tv"
-              className="flex-shrink-0 px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2 text-xs sm:text-sm font-medium border border-slate-700"
+              className="flex-shrink-0 px-5 py-2.5 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-all flex items-center gap-2.5 text-sm font-medium border border-slate-700 hover:border-slate-600"
             >
               <span>📺</span>
               <span className="hidden sm:inline">Voltar ao Painel</span>
@@ -332,16 +428,16 @@ export function AdminPanel() {
                 <span>📅</span>
                 Periodo:
               </h2>
-              <div className="flex gap-1.5 sm:gap-2">
+              <div className="flex gap-2 sm:gap-3">
                 {periods.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setPeriod(p.id)}
                     className={`
-                      px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all
+                      px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all
                       ${period === p.id
-                        ? 'bg-[#2DD4BF] text-slate-900'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                        ? 'bg-[#2DD4BF] text-slate-900 shadow-lg shadow-[#2DD4BF]/20'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 hover:border-slate-600'
                       }
                     `}
                   >
@@ -412,7 +508,7 @@ export function AdminPanel() {
               <div className="flex items-end">
                 <button
                   onClick={applyBulkGoals}
-                  className="w-full px-4 py-2 bg-[#2DD4BF] text-slate-900 rounded-lg hover:bg-[#2DD4BF]/80 transition-colors text-xs sm:text-sm font-medium"
+                  className="w-full px-5 py-2.5 bg-[#2DD4BF] text-slate-900 rounded-xl hover:bg-[#2DD4BF]/80 transition-all text-sm font-semibold shadow-lg shadow-[#2DD4BF]/20"
                 >
                   Aplicar a Todos
                 </button>
@@ -439,17 +535,17 @@ export function AdminPanel() {
               </div>
 
               <div>
-                <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Avatar</label>
-                <div className="flex gap-1.5 sm:gap-2 flex-wrap items-center">
+                <label className="block text-xs text-slate-400 mb-2">Avatar</label>
+                <div className="flex gap-2 flex-wrap items-center">
                   {avatarOptions.map((avatar) => (
                     <button
                       key={avatar}
                       type="button"
                       onClick={() => setFormData({ ...formData, avatar })}
                       className={`
-                        w-8 h-8 sm:w-10 sm:h-10 text-base sm:text-xl rounded-lg border transition-all
+                        w-10 h-10 sm:w-12 sm:h-12 text-lg sm:text-xl rounded-xl border-2 transition-all
                         ${formData.avatar === avatar
-                          ? 'border-cyan-500 bg-cyan-500/20'
+                          ? 'border-cyan-500 bg-cyan-500/20 shadow-lg shadow-cyan-500/20'
                           : 'border-slate-700 bg-slate-800 hover:border-slate-600'
                         }
                       `}
@@ -457,17 +553,17 @@ export function AdminPanel() {
                       {avatar}
                     </button>
                   ))}
-                  <label className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg border border-dashed border-slate-600 bg-slate-800 flex items-center justify-center cursor-pointer hover:border-cyan-500 transition-colors">
+                  <label className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border-2 border-dashed border-slate-600 bg-slate-800 flex items-center justify-center cursor-pointer hover:border-cyan-500 transition-all">
                     <input
                       type="file"
                       accept="image/*"
                       onChange={(e) => handleAvatarUpload(e, null)}
                       className="hidden"
                     />
-                    <span className="text-slate-400 text-base sm:text-lg">📷</span>
+                    <span className="text-slate-400 text-lg sm:text-xl">📷</span>
                   </label>
                   {formData.avatar && formData.avatar.startsWith('data:') && (
-                    <img src={formData.avatar} alt="Preview" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover" />
+                    <img src={formData.avatar} alt="Preview" className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover" />
                   )}
                 </div>
               </div>
@@ -520,8 +616,8 @@ export function AdminPanel() {
               </div>
 
               <div>
-                <label className="block text-[10px] sm:text-xs text-slate-400 mb-1">Badges Especiais</label>
-                <div className="flex flex-wrap gap-1.5">
+                <label className="block text-xs text-slate-400 mb-2">Badges Especiais</label>
+                <div className="flex flex-wrap gap-2">
                   {['Maior Venda do Dia 💸', 'Estrela da Semana ⭐', 'Speed Demon ⚡', 'Top Performer 🎯'].map((badge) => (
                     <button
                       key={badge}
@@ -534,9 +630,9 @@ export function AdminPanel() {
                         setFormData({ ...formData, badges: newBadges })
                       }}
                       className={`
-                        px-2 py-1 text-[10px] sm:text-xs rounded-lg border transition-all
+                        px-3 py-1.5 text-xs rounded-xl border transition-all font-medium
                         ${(formData.badges || []).includes(badge)
-                          ? 'border-[#E8A33D]/50 bg-[#E8A33D]/10 text-[#E8A33D]'
+                          ? 'border-[#E8A33D]/50 bg-[#E8A33D]/10 text-[#E8A33D] shadow-lg shadow-[#E8A33D]/10'
                           : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
                         }
                       `}
@@ -577,7 +673,7 @@ export function AdminPanel() {
                         if (input) input.value = ''
                       }
                     }}
-                    className="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors text-xs"
+                    className="px-4 py-2 bg-slate-700 text-slate-300 rounded-xl hover:bg-slate-600 transition-all text-sm font-medium border border-slate-600"
                   >
                     + Tag
                   </button>
@@ -603,10 +699,10 @@ export function AdminPanel() {
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-[#2DD4BF] text-slate-900 rounded-lg hover:bg-[#2DD4BF]/80 transition-colors text-xs sm:text-sm font-medium"
+                  className="flex-1 px-5 py-2.5 bg-[#2DD4BF] text-slate-900 rounded-xl hover:bg-[#2DD4BF]/80 transition-all text-sm font-semibold shadow-lg shadow-[#2DD4BF]/20"
                 >
                   {formData.id ? 'Salvar' : 'Adicionar'}
                 </button>
@@ -614,7 +710,7 @@ export function AdminPanel() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors text-xs sm:text-sm"
+                    className="px-5 py-2.5 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-all text-sm font-medium border border-slate-700"
                   >
                     Cancelar
                   </button>
@@ -680,7 +776,7 @@ export function AdminPanel() {
                 </div>
                 <button
                   onClick={handleStopSprint}
-                  className="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-xs sm:text-sm font-medium border border-red-500/30"
+                  className="w-full px-5 py-2.5 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-all text-sm font-semibold border border-red-500/40"
                 >
                   Encerrar Sprint
                 </button>
@@ -711,7 +807,7 @@ export function AdminPanel() {
                 </div>
                 <button
                   onClick={handleStartSprint}
-                  className="w-full px-4 py-2 bg-[#E8A33D] text-slate-900 rounded-lg hover:bg-[#E8A33D]/80 transition-colors text-xs sm:text-sm font-medium"
+                  className="w-full px-5 py-2.5 bg-[#E8A33D] text-slate-900 rounded-xl hover:bg-[#E8A33D]/80 transition-all text-sm font-semibold shadow-lg shadow-[#E8A33D]/20"
                 >
                   Iniciar Sprint
                 </button>
@@ -786,7 +882,7 @@ export function AdminPanel() {
 
               <button
                 onClick={handleSavePrize}
-                className="w-full px-4 py-2 bg-[#2DD4BF] text-slate-900 rounded-lg hover:bg-[#2DD4BF]/80 transition-colors text-xs sm:text-sm font-medium"
+                className="w-full px-5 py-2.5 bg-[#2DD4BF] text-slate-900 rounded-xl hover:bg-[#2DD4BF]/80 transition-all text-sm font-semibold shadow-lg shadow-[#2DD4BF]/20"
               >
                 Salvar Premio
               </button>
@@ -877,25 +973,25 @@ export function AdminPanel() {
                     </div>
                   )}
 
-                  <div className="flex flex-wrap gap-1 mb-3">
+                  <div className="flex flex-wrap gap-2 mb-3">
                     {quickValues.map((val) => (
                       <button
                         key={val}
                         onClick={() => setSaleInputs({ ...saleInputs, [seller.id]: val.toString() })}
-                        className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs bg-slate-700 text-slate-300 rounded hover:bg-slate-600 transition-colors"
+                        className="px-3 py-1.5 text-xs bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-all font-medium border border-slate-600"
                       >
                         +{formatCurrency(val)}
                       </button>
                     ))}
                   </div>
 
-                  <div className="flex gap-1.5 sm:gap-2 mb-2">
+                  <div className="flex gap-2 mb-2">
                     <input
                       type="number"
                       value={saleInputs[seller.id] || ''}
                       onChange={(e) => setSaleInputs({ ...saleInputs, [seller.id]: e.target.value })}
                       placeholder="Valor"
-                      className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 bg-slate-700 rounded-lg border border-slate-600 focus:border-[#2DD4BF] focus:outline-none text-xs sm:text-sm"
+                      className="flex-1 min-w-0 px-3 py-2 bg-slate-700 rounded-xl border border-slate-600 focus:border-[#2DD4BF] focus:outline-none text-sm"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
@@ -905,13 +1001,13 @@ export function AdminPanel() {
                     />
                     <button
                       onClick={() => handleAddSale(seller.id)}
-                      className="px-2 sm:px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-[10px] sm:text-xs font-medium"
+                      className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all text-sm font-semibold shadow-lg shadow-green-500/20"
                     >
                       + Venda
                     </button>
                     <button
                       onClick={() => handleRemoveSale(seller.id)}
-                      className="px-2 sm:px-3 py-1.5 bg-red-500/80 text-white rounded-lg hover:bg-red-600 transition-colors text-[10px] sm:text-xs font-medium"
+                      className="px-4 py-2 bg-red-500/80 text-white rounded-xl hover:bg-red-600 transition-all text-sm font-semibold"
                     >
                       − Remover
                     </button>
@@ -1009,16 +1105,16 @@ export function AdminPanel() {
                           <span className="text-[10px] sm:text-xs text-slate-400">{Math.round(percentage)}%</span>
                         </div>
                       </td>
-                      <td className="py-2 sm:py-3 text-right">
+                      <td className="py-3 text-right">
                         <button
                           onClick={() => handleEdit(seller)}
-                          className="px-1.5 sm:px-2 py-1 bg-slate-800 text-slate-300 rounded hover:bg-slate-700 transition-colors mr-1 text-[10px] sm:text-xs"
+                          className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-all mr-2 text-xs font-medium border border-slate-700"
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => handleDelete(seller.id)}
-                          className="px-1.5 sm:px-2 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors text-[10px] sm:text-xs"
+                          className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all text-xs font-medium border border-red-500/30"
                         >
                           Remover
                         </button>
@@ -1030,7 +1126,57 @@ export function AdminPanel() {
             </table>
           </div>
         </div>
+
+        {/* ---- Zona de Perigo ---- */}
+        <div className="mt-4 sm:mt-6 bg-red-950/30 rounded-xl p-4 sm:p-5 border border-red-500/20">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-red-400">Zona de Perigo</h2>
+                <p className="text-red-300/60 text-xs sm:text-sm">Zera todas as vendas de todos os vendedores (irreversivel)</p>
+              </div>
+            </div>
+            <button
+              onClick={handleResetAllSales}
+              className="px-6 py-2.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all text-sm font-semibold border border-red-500/40 flex items-center gap-2 justify-center"
+            >
+              <span>🗑️</span>
+              <span>Resetar Todas as Vendas</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 sm:mt-6">
+          <SalesFilter sellers={sellers} />
+        </div>
+
+        <div className="mt-4 sm:mt-6">
+          <SalesTrendChart 
+            salesHistory={salesHistory} 
+            sellers={sellers} 
+            period={period} 
+          />
+        </div>
+
+        <div className="mt-4 sm:mt-6">
+          <ExportReport 
+            sellers={sellers} 
+            salesHistory={salesHistory} 
+            teamGoal={teamGoal} 
+            period={period} 
+          />
+        </div>
+
+        <div className="mt-4 sm:mt-6">
+          <ComparativeDashboard 
+            sellers={sellers} 
+            salesHistory={salesHistory} 
+          />
+        </div>
       </main>
     </div>
   )
 }
+
+export default AdminPanel

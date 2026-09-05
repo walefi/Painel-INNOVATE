@@ -1,27 +1,31 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { DashboardTV } from './pages/DashboardTV'
-import { AdminPanel } from './pages/AdminPanel'
 
-/**
- * Componente principal da aplicação
- * Configura as rotas do React Router
- */
+const DashboardTV = lazy(() => import('./pages/DashboardTV'))
+const AdminPanel = lazy(() => import('./pages/AdminPanel'))
+
+function LoadingFallback() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-slate-950 text-white">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-[#2DD4BF] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-[#2DD4BF] font-medium">Carregando...</p>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Rota do Painel de TV */}
-        <Route path="/tv" element={<DashboardTV />} />
-        
-        {/* Rota do Painel do Gerente */}
-        <Route path="/admin" element={<AdminPanel />} />
-        
-        {/* Redireciona a raiz para o Painel de TV */}
-        <Route path="/" element={<Navigate to="/tv" replace />} />
-        
-        {/* Rota curinga - redireciona para TV */}
-        <Route path="*" element={<Navigate to="/tv" replace />} />
-      </Routes>
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          <Route path="/tv" element={<DashboardTV />} />
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/" element={<Navigate to="/tv" replace />} />
+          <Route path="*" element={<Navigate to="/tv" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }
